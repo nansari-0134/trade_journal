@@ -130,6 +130,7 @@
                         <th>ENTRY PRICE</th>
                         <th>STATUS</th>
                         <th class="text-end pe-4">NET PNL</th>
+                        <th style="width: 30px;"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -165,14 +166,14 @@
                         </td>
                         <td class="text-end pe-4">
                             <div class="{% if t.net_pnl >= 0 %}text-green{% else %}text-red{% endif %} fw-bold small">
-                                {% if t.net_pnl > 0 %}+${{ t.net_pnl }}{% elif t.net_pnl < 0 %}-${{ t.net_pnl|stringformat:"+f"|slice:"1:" }}{% else %}$0.00{% endif %}
+                                {% if t.net_pnl > 0 %}+${{ t.net_pnl|floatformat:2 }}{% elif t.net_pnl < 0 %}-${{ t.net_pnl|floatformat:2|slice:"1:" }}{% else %}$0.00{% endif %}
                             </div>
                         </td>
                         <td class="pe-3 text-muted" style="width:30px;"><i class="fa-solid fa-chevron-right" style="font-size:0.7rem;"></i></td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">No trades imported yet.</td>
+                        <td colspan="7" class="text-center text-muted py-4">No trades imported yet.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -207,13 +208,13 @@
                     <div class="pnl-chip {% if t.net_pnl >= 0 %}pnl-good{% else %}pnl-bad{% endif %}">
                         <span class="chip-label">NET PnL</span>
                         <span class="chip-val">
-                            {% if t.net_pnl > 0 %}+{% endif %}${{ t.net_pnl }}
+                            {% if t.net_pnl > 0 %}+${{ t.net_pnl|floatformat:2 }}{% elif t.net_pnl < 0 %}-${{ t.net_pnl|floatformat:2|slice:"1:" }}{% else %}$0.00{% endif %}
                         </span>
                     </div>
                     <div class="pnl-chip {% if t.trade.realized_pnl >= 0 %}pnl-good{% else %}pnl-bad{% endif %}">
                         <span class="chip-label">REALIZED</span>
                         <span class="chip-val">
-                            {% if t.trade.realized_pnl > 0 %}+{% endif %}${{ t.trade.realized_pnl|floatformat:2 }}
+                            {% if t.trade.realized_pnl > 0 %}+${{ t.trade.realized_pnl|floatformat:2 }}{% elif t.trade.realized_pnl < 0 %}-${{ t.trade.realized_pnl|floatformat:2|slice:"1:" }}{% else %}$0.00{% endif %}
                         </span>
                     </div>
                     <div class="pnl-chip pnl-bad">
@@ -223,7 +224,7 @@
                     <div class="pnl-chip {% if t.net_pnl_with_rebate >= 0 %}pnl-good{% else %}pnl-bad{% endif %}">
                         <span class="chip-label">NET PnL (INCL. REBATES)</span>
                         <span class="chip-val">
-                            {% if t.net_pnl_with_rebate > 0 %}+{% endif %}${{ t.net_pnl_with_rebate }}
+                            {% if t.net_pnl_with_rebate > 0 %}+${{ t.net_pnl_with_rebate|floatformat:2 }}{% elif t.net_pnl_with_rebate < 0 %}-${{ t.net_pnl_with_rebate|floatformat:2|slice:"1:" }}{% else %}$0.00{% endif %}
                         </span>
                     </div>
                     <div class="pnl-chip pnl-neutral">

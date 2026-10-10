@@ -119,12 +119,6 @@
             border-right: 3px solid var(--accent-cyan);
         }
 
-        .sidebar-footer {
-            margin-top: auto;
-            margin-bottom: 20px;
-            width: 100%;
-        }
-
         /* MAIN CONTENT */
         .main-content {
             margin-left: 80px;
@@ -250,6 +244,10 @@
                 <i class="fa-solid fa-calendar-days"></i>
                 <span>Calendar</span>
             </a>
+            <a href="{% url 'journal:planned_trades' %}" class="nav-item {% if request.resolver_match.url_name == 'planned_trades' %}active{% endif %}">
+                <i class="fa-solid fa-clipboard-list"></i>
+                <span>Planned</span>
+            </a>
             <a href="{% url 'journal:products_fees' %}" class="nav-item {% if request.resolver_match.url_name == 'products_fees' %}active{% endif %}">
                 <i class="fa-solid fa-tags"></i>
                 <span>Product Fees</span>
@@ -262,20 +260,9 @@
                 <i class="fa-solid fa-leaf"></i>
                 <span>Palm Oil</span>
             </a>
-            <a href="{% url 'journal:strategies' %}" class="nav-item">
+            <a href="{% url 'journal:strategies' %}" class="nav-item {% if request.resolver_match.url_name == 'strategies' %}active{% endif %}">
                 <i class="fa-solid fa-layer-group"></i>
                 <span>Strategies</span>
-            </a>
-            <a href="#" class="nav-item">
-                <i class="fa-solid fa-gear"></i>
-                <span>Settings</span>
-            </a>
-        </div>
-
-        <div class="sidebar-footer">
-            <a href="#" class="nav-item">
-                <i class="fa-solid fa-circle-user"></i>
-                <span>Account</span>
             </a>
         </div>
     </div>
@@ -344,15 +331,11 @@
                 <button class="btn btn-outline-secondary rounded-circle" type="button" id="themeToggle" title="Toggle Theme">
                     <i class="fa-solid fa-sun" id="themeIcon"></i>
                 </button>
-                <div class="dropdown">
-                    <button class="btn btn-outline-secondary rounded-circle" type="button" id="profileDropdown" data-bs-toggle="dropdown">
-                        <i class="fa-solid fa-bell"></i>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow bg-dark">
-                        <li><a class="dropdown-item text-white" href="#">No new notifications</a></li>
-                    </ul>
+                <div class="d-flex align-items-center gap-2 ps-2 border-start border-dark">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent-cyan), #00a8b5); color: #000; font-size: 0.8rem; letter-spacing: -0.5px;" title="Active Trader">
+                        TJ
+                    </div>
                 </div>
-                <img src="https://ui-avatars.com/api/?name=Trader+404&background=00f2ff&color=000" class="rounded-circle" width="40" height="40" alt="Profile">
             </div>
         </div>
 

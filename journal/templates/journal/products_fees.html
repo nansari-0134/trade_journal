@@ -19,6 +19,8 @@
                             <th>GROUP</th>
                             <th>EXCHANGE</th>
                             <th>CURRENCY</th>
+                            <th class="text-end">TICK SIZE</th>
+                            <th class="text-end">POINT VALUE</th>
                             <th class="text-end">TC PRE-REBATE</th>
                             <th class="pe-4 text-end">TC POST-REBATE</th>
                         </tr>
@@ -32,15 +34,21 @@
                             <td class="small">{{ data.exchange }}</td>
                             <td class="small">{{ data.currency }}</td>
                             <td class="text-end font-monospace small">
-                                {% if data.tc_pre %}${{ data.tc_pre|floatformat:4 }}{% else %}—{% endif %}
+                                {% if data.tick_size %}{{ data.tick_size|floatformat:4 }}{% else %}—{% endif %}
                             </td>
-                            <td class="pe-4 text-end font-monospace small {% if data.tc_post > 0 %}text-red{% elif data.tc_post < 0 %}text-green{% endif %}">
-                                {% if data.tc_post %}${{ data.tc_post|floatformat:4 }}{% else %}—{% endif %}
+                            <td class="text-end font-monospace small">
+                                {% if data.point_value %}${{ data.point_value|floatformat:2 }}{% else %}—{% endif %}
+                            </td>
+                            <td class="text-end font-monospace small text-muted">
+                                {% if data.tc_pre %}{% if data.tc_pre < 0 %}-${{ data.tc_pre|floatformat:4|slice:"1:" }}{% else %}${{ data.tc_pre|floatformat:4 }}{% endif %}{% else %}—{% endif %}
+                            </td>
+                            <td class="pe-4 text-end font-monospace small">
+                                {% if data.tc_post %}{% if data.tc_post < 0 %}-${{ data.tc_post|floatformat:4|slice:"1:" }}{% else %}${{ data.tc_post|floatformat:4 }}{% endif %}{% else %}—{% endif %}
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No product data found in Products.xlsx</td>
+                            <td colspan="9" class="text-center text-muted py-4">No product data found in Products.xlsx</td>
                         </tr>
                         {% endfor %}
                     </tbody>

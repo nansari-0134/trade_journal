@@ -13,11 +13,11 @@
 <div class="row g-4">
     <!-- LEFT: ADD PLANNED TRADE FORM -->
     <div class="col-lg-5">
-        <div class="card shadow border-0 rounded-4">
-            <div class="card-header bg-transparent border-bottom-0 pt-3 pb-1 px-4">
-                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-plus-circle text-primary me-2"></i>New Planned Trade</h5>
+        <div class="premium-card">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-plus-circle text-cyan me-2"></i>New Planned Trade</h5>
             </div>
-            <div class="card-body px-4 pb-4">
+            <div>
                 <form method="post" action="{% url 'journal:planned_trade_add' %}" enctype="multipart/form-data" id="plannedTradeForm">
                     {% csrf_token %}
                     <input type="hidden" name="strategy_template" id="ptTemplateId" value="">
@@ -152,8 +152,11 @@
 
     <!-- RIGHT: PLANNED TRADES LIST -->
     <div class="col-lg-7">
-        <div class="card shadow border-0 rounded-4">
-            <div class="card-body px-4">
+        <div class="premium-card">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-list-check text-cyan me-2"></i>Active Watchlist & Plans</h5>
+            </div>
+            <div>
                 {% for pt in planned_trades %}
                 <div class="border rounded-3 p-3 mb-3 {% if pt.status == 'Executed' %}bg-success bg-opacity-10{% elif pt.status == 'Cancelled' %}bg-danger bg-opacity-10{% endif %}">
                     <div class="d-flex justify-content-between align-items-start mb-2">
