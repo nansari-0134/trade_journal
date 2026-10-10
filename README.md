@@ -17,6 +17,7 @@ Designed specifically for professional commodity traders, quant analysts, and fu
 - **Palm Oil (FCPO) Fundamentals**: Dedicated dashboard for Bursa Malaysia Derivatives (BMD) Crude Palm Oil featuring forward price curves, Malaysian Palm Oil Board (MPOB) statistics, and high-frequency surveyor export estimates (SGS, ITS, AmSpec).
 - **Interactive Calendar & Trade Planning**: Schedule setups across recurring cycles (`Once`, `Monthly`, `Yearly`, `Specific Months`) with chart screenshots and an interactive monthly activity calendar.
 - **Executive Dark UI with Privacy Mode**: Glassmorphism dark-mode interface built with Bootstrap 5 and Chart.js, featuring one-click privacy toggle to blur sensitive monetary balances during presentations or streaming.
+- **Trading Bot REST API**: Full JSON REST API (`/api/trades/`) allowing algorithmic trading bots to execute, query, scale into/out of, and close trade entries programmatically.
 
 ---
 
@@ -157,3 +158,4 @@ Navigate to [http://127.0.0.1:8000/](http://127.0.0.1:8000/) (or the port specif
 - **[How to Add More Products](docs/guides/adding-products.md)**
 - **[How to Add Strategies & Pairs](docs/guides/adding-strategies.md)**
 - **[Multiplier & PnL Formulas](docs/reference/formulas.md)**
+- **[Trading Bot REST API](docs/reference/api.md)**
