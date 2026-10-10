@@ -157,4 +157,3 @@ Navigate to [http://127.0.0.1:8000/](http://127.0.0.1:8000/) (or the port specif
 - **[How to Add More Products](docs/guides/adding-products.md)**
 - **[How to Add Strategies & Pairs](docs/guides/adding-strategies.md)**
 - **[Multiplier & PnL Formulas](docs/reference/formulas.md)**
-
