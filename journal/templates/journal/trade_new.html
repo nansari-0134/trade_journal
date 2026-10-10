@@ -1,0 +1,612 @@
+{% extends 'journal/base.html' %}
+{% block page_title %}New Trade — Trade Journal{% endblock %}
+{% block header_title %}New Trade{% endblock %}
+{% block content %}
+<style>
+/* ── Ultra-Compact & Aesthetic New Trade Form ── */
+:root {
+    --form-bg: #0d1117;
+    --accent: #00f2ff;
+    --accent-dim: rgba(0, 242, 255, 0.15);
+    --border: rgba(255, 255, 255, 0.1);
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --text-muted: #8b949e;
+    --long-color: #238636;
+    --short-color: #da3633;
+}
+
+.fast-form-container {
+    max-width: 1300px;
+    margin: 0 auto;
+}
+
+.glass-card {
+    background: var(--form-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    height: 100%;
+    transition: border-color 0.2s;
+}
+.glass-card:focus-within {
+    border-color: var(--accent-dim);
+}
+
+.compact-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    display: block;
+}
+
+.compact-input {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: #c9d1d9;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    width: 100%;
+}
+.compact-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+/* Direction Toggle */
+.dir-group {
+    display: flex;
+    gap: 4px;
+    background: var(--input-bg);
+    padding: 3px;
+    border-radius: 8px;
+}
+.dir-toggle {
+    flex: 1;
+    padding: 6px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-muted);
+}
+.dir-toggle.long.active { background: var(--long-color); color: white; }
+.dir-toggle.short.active { background: var(--short-color); color: white; }
+
+/* Emotion Pills */
+.emotion-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.emotion-pill {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.emotion-pill:hover { border-color: var(--accent); }
+.emotion-pill.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+/* Shortcut Buttons */
+.shortcut-btn {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+.shortcut-btn:hover { color: white; border-color: var(--text-muted); }
+
+/* Screenshot Zone */
+#screenshotZone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    overflow: hidden;
+    position: relative;
+}
+#screenshotZone.has-img { border-style: solid; border-color: var(--accent-dim); }
+#screenshotPreview { max-height: 100%; max-width: 100%; object-fit: contain; }
+
+/* Sub-options for Curve */
+#curveOptions { display: none; }
+
+.submit-bar {
+    position: sticky;
+    bottom: 1rem;
+    z-index: 100;
+    background: rgba(13,17,23,0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem 1.5rem;
+    margin-top: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.btn-open {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-weight: 800;
+    padding: 8px 24px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+</style>
+
+<form method="post" action="{% url 'journal:trade_add' %}" id="newTradeForm" class="fast-form-container">
+    {% csrf_token %}
+    <input type="hidden" name="direction" id="directionInput" value="Long">
+    <input type="hidden" name="strategy_template" id="selectedTemplateId" value="">
+    <input type="hidden" name="analysis_custom" id="analysisHidden">
+    <input type="hidden" name="emotion" id="emotionInput" value="">
+    <input type="hidden" name="screenshot_data" id="screenshotInput" value="">
+
+    <div class="row g-3">
+        <!-- ══ COLUMN 1: STRATEGY & INSTRUMENT ══ -->
+        <div class="col-lg-4">
+            <div class="glass-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="compact-label"><i class="fa-solid fa-layer-group me-1"></i> Strategy</span>
+                    <a href="{% url 'journal:strategies' %}" class="shortcut-btn"><i class="fa-solid fa-cog"></i></a>
+                </div>
+
+                <div class="dir-group mb-3">
+                    <button type="button" class="dir-toggle long active" onclick="setDir('Long')">LONG</button>
+                    <button type="button" class="dir-toggle short" onclick="setDir('Short')">SHORT</button>
+                </div>
+
+                <div class="mb-2">
+                    <label class="compact-label"><i class="fa-solid fa-list me-1"></i> Quick Pick</label>
+                    <div style="max-height: 250px; overflow-y:auto; padding-right: 5px;">
+                        {% for category, strats in strategy_groups.items %}
+                        <div class="mb-2">
+                            <div style="font-size: 0.6rem; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">{{ category }}</div>
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for s in strats %}
+                                <button type="button" class="shortcut-btn strategy-pick-btn" 
+                                        data-id="{{ s.id }}" data-name="{{ s.name }}" data-category="{{ s.category }}">
+                                    {{ s.name }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-5">
+                        <label class="compact-label">Type</label>
+                        <select name="trade_type" id="tradeTypeSelect" class="compact-input">
+                            {% for val, label in trade_types %}
+                            <option value="{{ val }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-7">
+                        <label class="compact-label">Label</label>
+                        <input type="text" name="strategy_label" id="strategyLabelInput" class="compact-input" placeholder="Jun/Jul Spread">
+                    </div>
+                </div>
+
+                <!-- Instrument Auto-Gen -->
+                <div id="quickEntrySection" class="d-none border rounded p-2 mb-2" style="background: rgba(255,255,255,0.02);">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="compact-label">Base Product</label>
+                            <select id="baseProductSelect" class="compact-input">
+                                <option value="">Select...</option>
+                                {% for group, symbols in product_groups.items %}
+                                <optgroup label="{{ group }}">
+                                    {% for symbol in symbols %}
+                                    <option value="{{ symbol }}">{{ symbol }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="compact-label">Base Month</label>
+                            <select id="baseMonthSelect" class="compact-input">
+                                <option value="">Select...</option>
+                                {% for m in contract_months %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="compact-label">Legs</label>
+                    <button type="button" class="shortcut-btn" id="addLegBtn"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                <div id="legsWrapper" style="max-height: 200px; overflow-y:auto;">
+                    <!-- Initial Dynamic Leg -->
+                    <div class="leg-card border-bottom border-secondary pb-1 mb-1" data-index="0">
+                        <div class="row gx-1 align-items-center">
+                            <div class="col-3">
+                                <select name="leg_0_product" class="compact-input p-1" required>
+                                    <option value="">Sym</option>
+                                    {% for group, symbols in product_groups.items %}
+                                    <optgroup label="{{ group }}">
+                                        {% for symbol in symbols %}
+                                        <option value="{{ symbol }}">{{ symbol }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-2">
+                                <select name="leg_0_contract_month" class="compact-input p-1">
+                                    <option value="">Mo</option>
+                                    {% for m in contract_months %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-2">
+                                <select name="leg_0_direction" class="compact-input p-1">
+                                    <option value="Buy">B</option>
+                                    <option value="Sell">S</option>
+                                </select>
+                            </div>
+                            <div class="col-2">
+                                <input type="number" name="leg_0_ratio" class="compact-input p-1" value="1">
+                            </div>
+                            <div class="col-3 text-end"><span style="font-size:0.6rem; color:var(--text-muted);">L1</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ COLUMN 2: EXECUTION & DETAILS ══ -->
+        <div class="col-lg-4">
+            <div class="glass-card">
+                <span class="compact-label"><i class="fa-solid fa-gauge me-1"></i> Execution Details</span>
+                
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="compact-label">Size *</label>
+                        <input type="number" step="any" name="size" class="compact-input" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="compact-label">Price</label>
+                        <input type="number" step="any" name="price" class="compact-input">
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-4">
+                        <label class="compact-label">Stoploss</label>
+                        <input type="number" step="any" name="stoploss" class="compact-input" placeholder="0.0">
+                    </div>
+                    <div class="col-4">
+                        <label class="compact-label">Target</label>
+                        <input type="number" step="any" name="target" class="compact-input" placeholder="0.0">
+                    </div>
+                    <div class="col-4">
+                        <label class="compact-label">Mkt Price</label>
+                        <input type="number" step="any" name="market_price" class="compact-input" placeholder="0.0">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span class="compact-label">Analysis</span>
+                        <div id="curveOptions" class="d-flex gap-1">
+                            <button type="button" class="shortcut-btn" onclick="toggleAnalysis('Curve: Front')">Front</button>
+                            <button type="button" class="shortcut-btn" onclick="toggleAnalysis('Curve: Mid')">Mid</button>
+                            <button type="button" class="shortcut-btn" onclick="toggleAnalysis('Curve: Back')">Back</button>
+                        </div>
+                    </div>
+                    <div class="emotion-group mb-1">
+                        <span class="emotion-pill" onclick="toggleAnalysis('Range Bounded')">Range Bounded</span>
+                        <span class="emotion-pill" onclick="toggleAnalysis('Seasonality')">Seasonality</span>
+                        <span class="emotion-pill" onclick="toggleAnalysis('Price Action')">Price Action</span>
+                        <span class="emotion-pill" onclick="toggleAnalysis('Technicals')">Technicals</span>
+                        <span class="emotion-pill" onclick="toggleCurveOptions()">Curve ▾</span>
+                    </div>
+                    <div id="analysisChips" class="d-flex flex-wrap gap-1"></div>
+                </div>
+
+                <div class="mb-0">
+                    <label class="compact-label">Screenshot (Paste Image)</label>
+                    <div id="screenshotZone" onclick="document.getElementById('fileInput').click()">
+                        <div id="sc-placeholder">
+                            <i class="fa-solid fa-camera mb-1 d-block text-center" style="font-size:1.2rem;"></i>
+                            <span>Paste (Ctrl+V) or Click to Upload</span>
+                        </div>
+                        <img id="screenshotPreview" class="d-none">
+                        <button type="button" id="clearScreenshot" class="btn btn-sm btn-danger d-none" style="position: absolute; top:5px; right:5px; padding:0 5px; font-size:0.6rem;">✕</button>
+                    </div>
+                    <input type="file" id="fileInput" class="d-none" accept="image/*">
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ COLUMN 3: TIMING & EMOTION ══ -->
+        <div class="col-lg-4">
+            <div class="glass-card">
+                <span class="compact-label"><i class="fa-solid fa-clock me-1"></i> Timing & Context</span>
+                
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="compact-label">Date</label>
+                        <input type="date" name="trade_date" id="tradeDateInput" class="compact-input">
+                    </div>
+                    <div class="col-6">
+                        <label class="compact-label">Time</label>
+                        <input type="time" name="trade_time" id="tradeTimeInput" class="compact-input">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="compact-label">Expiry Date</label>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="shortcut-btn" onclick="setExpiry('Intraday')">Today</button>
+                            <button type="button" class="shortcut-btn" onclick="setExpiry('Week')">EOW</button>
+                            <button type="button" class="shortcut-btn" onclick="setExpiry('Month')">EOM</button>
+                        </div>
+                    </div>
+                    <input type="date" name="expiry_date" id="expiryDateInput" class="compact-input">
+                </div>
+
+                <div class="mb-3">
+                    <label class="compact-label">Emotion</label>
+                    <div class="emotion-group" id="emotionPills">
+                        <span class="emotion-pill" onclick="setEmotion('Fear')">Fear</span>
+                        <span class="emotion-pill" onclick="setEmotion('Aggressive')">Aggressive</span>
+                        <span class="emotion-pill active" onclick="setEmotion('Confident')">Confident</span>
+                        <span class="emotion-pill" onclick="setEmotion('Not so Confident')">Not so Confident</span>
+                        <span class="emotion-pill" onclick="setEmotion('Going with the Flow')">Going with flow</span>
+                    </div>
+                </div>
+
+                <div class="mb-0">
+                    <label class="compact-label">Notes</label>
+                    <textarea name="notes" class="compact-input" rows="3" style="resize:none;" placeholder="Rationale..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ STICKY SUBMIT BAR ══ -->
+    <div class="submit-bar">
+        <div class="d-flex align-items-center gap-3">
+            <div id="formSummary" class="text-muted" style="font-size: 0.75rem;">
+                <span id="summaryText">Ready to execute...</span>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="reset" class="btn btn-sm btn-outline-secondary px-3">Reset</button>
+            <button type="submit" class="btn-open">OPEN TRADE <i class="fa-solid fa-bolt-lightning ms-2"></i></button>
+        </div>
+    </div>
+</form>
+
+<script>
+const strategies = {{ strategies_json|safe }};
+const interproductPairs = {{ pairs_json|safe }};
+const contractMonths = {{ contract_months_json|safe }};
+const selectedAnalysis = new Set();
+const emotionPills = document.querySelectorAll('#emotionPills .emotion-pill');
+const emotionInput = document.getElementById('emotionInput');
+
+// Initialize Defaults
+document.addEventListener('DOMContentLoaded', () => {
+    const now = new Date();
+    document.getElementById('tradeDateInput').value = now.toISOString().split('T')[0];
+    document.getElementById('tradeTimeInput').value = now.toTimeString().slice(0, 5);
+    setEmotion('Confident');
+});
+
+function setDir(val) {
+    document.getElementById('directionInput').value = val;
+    const btns = document.querySelectorAll('.dir-toggle');
+    btns[0].className = 'dir-toggle long' + (val === 'Long' ? ' active' : '');
+    btns[1].className = 'dir-toggle short' + (val === 'Short' ? ' active' : '');
+}
+
+function setEmotion(val) {
+    emotionInput.value = val;
+    emotionPills.forEach(p => {
+        p.classList.toggle('active', p.textContent.trim() === val);
+    });
+}
+
+function toggleCurveOptions() {
+    const div = document.getElementById('curveOptions');
+    div.style.display = (div.style.display === 'flex') ? 'none' : 'flex';
+}
+
+function toggleAnalysis(val) {
+    if (selectedAnalysis.has(val)) {
+        selectedAnalysis.delete(val);
+    } else {
+        selectedAnalysis.add(val);
+    }
+    renderAnalysisChips();
+}
+
+function renderAnalysisChips() {
+    const container = document.getElementById('analysisChips');
+    const hidden = document.getElementById('analysisHidden');
+    container.innerHTML = '';
+    selectedAnalysis.forEach(val => {
+        const chip = document.createElement('span');
+        chip.className = 'emotion-pill active';
+        chip.style.fontSize = '0.6rem';
+        chip.innerHTML = `${val} <span onclick="event.stopPropagation(); toggleAnalysis('${val}')">✕</span>`;
+        container.appendChild(chip);
+    });
+    hidden.value = Array.from(selectedAnalysis).join(',');
+}
+
+function setExpiry(type) {
+    const d = new Date();
+    const input = document.getElementById('expiryDateInput');
+    if (type === 'Intraday') {
+        // Same as today
+    } else if (type === 'Week') {
+        const day = d.getDay();
+        const diff = d.getDate() + (5 - day) + (day === 6 ? 6 : 0); // Friday
+        d.setDate(diff);
+    } else if (type === 'Month') {
+        d.setMonth(d.getMonth() + 1);
+        d.setDate(0); // Last day of current month
+    }
+    input.value = d.toISOString().split('T')[0];
+}
+
+// Screenshot Logic
+const zone = document.getElementById('screenshotZone');
+const preview = document.getElementById('screenshotPreview');
+const placeholder = document.getElementById('sc-placeholder');
+const clearBtn = document.getElementById('clearScreenshot');
+const scInput = document.getElementById('screenshotInput');
+
+document.addEventListener('paste', e => {
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    for (const item of items) {
+        if (item.type.indexOf("image") !== -1) {
+            const blob = item.getAsFile();
+            const reader = new FileReader();
+            reader.onload = event => setScreenshot(event.target.result);
+            reader.readAsDataURL(blob);
+        }
+    }
+});
+
+document.getElementById('fileInput').addEventListener('change', e => {
+    if (e.target.files && e.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = event => setScreenshot(event.target.result);
+        reader.readAsDataURL(e.target.files[0]);
+    }
+});
+
+function setScreenshot(data) {
+    preview.src = data;
+    preview.classList.remove('d-none');
+    placeholder.classList.add('d-none');
+    clearBtn.classList.remove('d-none');
+    zone.classList.add('has-img');
+    scInput.value = data;
+}
+
+clearBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    preview.src = '';
+    preview.classList.add('d-none');
+    placeholder.classList.remove('d-none');
+    clearBtn.classList.add('d-none');
+    zone.classList.remove('has-img');
+    scInput.value = '';
+});
+
+// Dynamic Legs & Strategy Pick (Simplified from old JS)
+let currentStrategy = null;
+const legsWrapper = document.getElementById('legsWrapper');
+const legTemplate = legsWrapper.querySelector('.leg-card').cloneNode(true);
+let legCount = 1;
+
+document.querySelectorAll('.strategy-pick-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        currentStrategy = strategies.find(s => s.id === id);
+        if (!currentStrategy) return;
+
+        document.getElementById('selectedTemplateId').value = id;
+        document.getElementById('strategyLabelInput').value = currentStrategy.name;
+        document.getElementById('quickEntrySection').classList.remove('d-none');
+        
+        const catMap = { 'Spread':'CalendarSpread', 'Butterfly':'Butterfly', 'DoubleFly':'DoubleFly', 'Custom':'Outright' };
+        document.getElementById('tradeTypeSelect').value = catMap[currentStrategy.category] || 'Outright';
+
+        generateLegs();
+        document.querySelectorAll('.strategy-pick-btn').forEach(b => b.classList.toggle('active', b === btn));
+    });
+});
+
+document.getElementById('baseProductSelect').addEventListener('change', generateLegs);
+document.getElementById('baseMonthSelect').addEventListener('change', generateLegs);
+document.getElementById('addLegBtn').addEventListener('click', () => addLegRow(legCount++));
+
+function generateLegs() {
+    if (!currentStrategy) return;
+    const baseProduct = document.getElementById('baseProductSelect').value;
+    const baseMonth = document.getElementById('baseMonthSelect').value;
+    if (!baseProduct || !baseMonth) return;
+
+    legsWrapper.innerHTML = '';
+    legCount = 0;
+    const activeRatios = currentStrategy.leg_ratios.map((r, i) => ({idx:i, ratio:r})).filter(x => x.ratio !== 0);
+    const pair = interproductPairs.find(p => p.name === baseProduct);
+
+    activeRatios.forEach(si => {
+        const mIdx = contractMonths.indexOf(baseMonth);
+        const targetMonth = (mIdx !== -1 && (mIdx + si.idx) < contractMonths.length) ? contractMonths[mIdx + si.idx] : baseMonth;
+        
+        if (pair) {
+            // Interproduct handles two products per ratio index
+            [pair.p1, pair.p2].forEach((prod, pIdx) => {
+                // If it's a spread template applied to a pair, we usually multiply ratio
+                // But let's follow the standard pattern: P1 is buy, P2 is sell for the same ratio
+                const dir = (si.ratio > 0) ? (pIdx === 0 ? 'Buy' : 'Sell') : (pIdx === 0 ? 'Sell' : 'Buy');
+                addLegRow(legCount++, { product: prod, contract_month: targetMonth, direction: dir, ratio: Math.abs(si.ratio) });
+            });
+        } else {
+            addLegRow(legCount++, { product: baseProduct, contract_month: targetMonth, direction: si.ratio > 0 ? 'Buy' : 'Sell', ratio: Math.abs(si.ratio) });
+        }
+    });
+
+    // Update label to reflect the selection
+    document.getElementById('strategyLabelInput').value = `${baseProduct} ${baseMonth} ${currentStrategy.name}`;
+}
+
+function addLegRow(idx, data = {}) {
+    const newLeg = legTemplate.cloneNode(true);
+    newLeg.dataset.index = idx;
+    newLeg.querySelectorAll('[name]').forEach(el => {
+        const parts = el.name.split('_');
+        // Fix: the field name is everything after leg_{idx}_
+        const fieldName = parts.slice(2).join('_'); 
+        el.name = `leg_${idx}_${fieldName}`;
+        if (data[fieldName] !== undefined) el.value = data[fieldName];
+    });
+    
+    if (idx > 0) {
+        const del = document.createElement('div');
+        del.innerHTML = '<span style="color:#da3633; cursor:pointer; font-size:0.8rem;">✕</span>';
+        del.onclick = () => newLeg.remove();
+        newLeg.querySelector('.row').appendChild(del);
+    }
+    
+    newLeg.querySelector('.text-end').innerHTML = `<span style="font-size:0.6rem; color:var(--text-muted);">L${idx + 1}</span>`;
+    legsWrapper.appendChild(newLeg);
+}
+
+</script>
+{% endblock %}

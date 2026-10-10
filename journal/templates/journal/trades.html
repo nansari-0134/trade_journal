@@ -1,0 +1,476 @@
+{% extends 'journal/base.html' %}
+{% block page_title %}All Trades — Trade Journal{% endblock %}
+{% block header_title %}All Trades{% endblock %}
+{% block content %}
+<style>
+    .badge-status {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+    .badge-close {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+    .badge-open {
+        background: rgba(0, 242, 255, 0.1);
+        color: var(--accent-cyan);
+    }
+    .trade-row { cursor: pointer; transition: background 0.15s; }
+    .trade-row:hover { background: rgba(0,242,255,0.04) !important; }
+    .detail-label { font-size: 0.7rem; color: #888; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+    .detail-val  { font-size: 0.92rem; font-weight: 600; }
+    .adj-badge-open  { background: rgba(76,175,80,0.15); color: #4caf50; }
+    .adj-badge-close { background: rgba(244,67,54,0.15); color: #f44336; }
+    .trade-detail-modal .modal-content {
+        background: #111;
+        border: 1px solid rgba(0,242,255,0.12);
+    }
+    .trade-detail-modal .modal-header {
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .trade-detail-modal .leg-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 8px;
+    }
+    .pnl-chip {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px 18px;
+        border-radius: 10px;
+        min-width: 110px;
+    }
+    .pnl-chip .chip-label { font-size: 0.65rem; letter-spacing: 0.5px; opacity: 0.7; }
+    .pnl-chip .chip-val   { font-size: 1.1rem; font-weight: 700; }
+    .pnl-good { background: rgba(76,175,80,0.12); color: #4caf50; }
+    .pnl-bad  { background: rgba(244,67,54,0.12); color: #f44336; }
+    .pnl-neutral { background: rgba(255,255,255,0.05); color: #aaa; }
+</style>
+<div class="container-fluid px-0">
+    <!-- Row 1: Original 3 Categories -->
+    <div class="row mb-4">
+        <div class="col-lg-4 mb-4 mb-lg-0">
+            <div class="premium-card">
+                <h6 class="fw-bold mb-3 text-muted">Strategy PnL</h6>
+                <div style="position: relative; height: 200px; width: 100%;">
+                    <canvas id="strategyChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4 mb-lg-0">
+            <div class="premium-card">
+                <h6 class="fw-bold mb-3 text-muted">Product PnL</h6>
+                <div style="position: relative; height: 200px; width: 100%;">
+                    <canvas id="productChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="premium-card">
+                <h6 class="fw-bold mb-3 text-muted">Group PnL</h6>
+                <div style="position: relative; height: 200px; width: 100%;">
+                    <canvas id="groupChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 2: Time-based metrics (4 columns) -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+            <div class="premium-card p-3">
+                <h6 class="fw-bold mb-3 text-muted" style="font-size: 0.85rem;">Day-wise PnL</h6>
+                <div style="position: relative; height: 150px; width: 100%;">
+                    <canvas id="dayChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+            <div class="premium-card p-3">
+                <h6 class="fw-bold mb-3 text-muted" style="font-size: 0.85rem;">Week-wise PnL <span class="small">(1-4)</span></h6>
+                <div style="position: relative; height: 150px; width: 100%;">
+                    <canvas id="weekChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
+            <div class="premium-card p-3">
+                <h6 class="fw-bold mb-3 text-muted" style="font-size: 0.85rem;">Month-wise PnL</h6>
+                <div style="position: relative; height: 150px; width: 100%;">
+                    <canvas id="monthChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="premium-card p-3">
+                <h6 class="fw-bold mb-3 text-muted" style="font-size: 0.85rem;">Year-wise PnL</h6>
+                <div style="position: relative; height: 150px; width: 100%;">
+                    <canvas id="yearChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Trades Table -->
+    <div class="premium-card p-0 overflow-hidden">
+        <div class="px-4 pt-4 mb-3">
+            <h5 class="mb-0 fw-bold">Trade History</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-dark table-borderless align-middle mb-0">
+                <thead class="text-muted small border-bottom border-dark">
+                    <tr>
+                        <th class="ps-4">DATE</th>
+                        <th>SYMBOL</th>
+                        <th>ENTRY PRICE</th>
+                        <th>STATUS</th>
+                        <th class="text-end pe-4">NET PNL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in trades %}
+                    <tr class="trade-row" data-bs-toggle="modal" data-bs-target="#tradeDetailModal{{ t.trade.id }}">
+                        <td class="ps-4 small text-muted">{{ t.trade.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div>
+                                    <div class="fw-bold small">{{ t.trade.strategy_label|default:"—" }}</div>
+                                    <div class="text-muted" style="font-size: 0.65rem;">
+                                        {% for leg in t.legs %}{{ leg.product }}{% if not forloop.last %}/{% endif %}{% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="small">{{ t.avg_entry|floatformat:4 }}</td>
+                        <td>
+                            {% if t.status == 'Closed' %}
+                                <span class="badge-status badge-close">CLOSE</span>
+                            {% else %}
+                                <span class="badge-status badge-open">OPEN</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <div class="{% if t.net_pnl >= 0 %}text-green{% else %}text-red{% endif %} fw-bold small">
+                                {% if t.net_pnl > 0 %}+${{ t.net_pnl }}{% elif t.net_pnl < 0 %}-${{ t.net_pnl|stringformat:"+f"|slice:"1:" }}{% else %}$0.00{% endif %}
+                            </div>
+                        </td>
+                        <td class="pe-3 text-muted" style="width:30px;"><i class="fa-solid fa-chevron-right" style="font-size:0.7rem;"></i></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">No trades imported yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ===== TRADE DETAIL MODALS ===== -->
+{% for t in trades %}
+<div class="modal fade trade-detail-modal" id="tradeDetailModal{{ t.trade.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0">
+
+            <!-- Header -->
+            <div class="modal-header px-4 py-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge-status {% if t.status == 'Closed' %}badge-close{% else %}badge-open{% endif %}">{{ t.status|upper }}</span>
+                        <h5 class="mb-0 fw-bold">{{ t.trade.strategy_label|default:t.trade.trade_type }}</h5>
+                    </div>
+                    <div class="text-muted small">{{ t.trade.trade_type }} · {{ t.trade.direction }} · {{ t.trade.created_at|date:"N j, Y" }}</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body px-4 py-3">
+
+                <!-- PnL Chips -->
+                <div class="d-flex flex-wrap gap-3 mb-4">
+                    <div class="pnl-chip {% if t.net_pnl >= 0 %}pnl-good{% else %}pnl-bad{% endif %}">
+                        <span class="chip-label">NET PnL</span>
+                        <span class="chip-val">
+                            {% if t.net_pnl > 0 %}+{% endif %}${{ t.net_pnl }}
+                        </span>
+                    </div>
+                    <div class="pnl-chip {% if t.trade.realized_pnl >= 0 %}pnl-good{% else %}pnl-bad{% endif %}">
+                        <span class="chip-label">REALIZED</span>
+                        <span class="chip-val">
+                            {% if t.trade.realized_pnl > 0 %}+{% endif %}${{ t.trade.realized_pnl|floatformat:2 }}
+                        </span>
+                    </div>
+                    <div class="pnl-chip pnl-bad">
+                        <span class="chip-label">NET COMMISSION</span>
+                        <span class="chip-val">-${{ t.net_commission }}</span>
+                    </div>
+                    <div class="pnl-chip {% if t.net_pnl_with_rebate >= 0 %}pnl-good{% else %}pnl-bad{% endif %}">
+                        <span class="chip-label">NET PnL (INCL. REBATES)</span>
+                        <span class="chip-val">
+                            {% if t.net_pnl_with_rebate > 0 %}+{% endif %}${{ t.net_pnl_with_rebate }}
+                        </span>
+                    </div>
+                    <div class="pnl-chip pnl-neutral">
+                        <span class="chip-label">AVG ENTRY</span>
+                        <span class="chip-val">${{ t.avg_entry|floatformat:4 }}</span>
+                    </div>
+                    <div class="pnl-chip pnl-neutral">
+                        <span class="chip-label">OPEN SIZE</span>
+                        <span class="chip-val">{{ t.open_size }}</span>
+                    </div>
+                </div>
+
+                <!-- Legs -->
+                {% if t.legs %}
+                <div class="mb-4">
+                    <div class="detail-label mb-2">Legs</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for leg in t.legs %}
+                        <div class="leg-card px-3 py-2">
+                            <div class="fw-bold small">{{ leg.product }}</div>
+                            <div class="text-muted" style="font-size:0.7rem;">{{ leg.expiry|default:"" }} {% if leg.strike %}@ {{ leg.strike }}{% endif %} {{ leg.option_type|default:"" }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Notes -->
+                {% if t.trade.notes %}
+                <div class="mb-4">
+                    <div class="detail-label mb-1">Notes</div>
+                    <div class="small" style="color:#ccc;">{{ t.trade.notes }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Adjustment History -->
+                <div class="mb-2">
+                    <div class="detail-label mb-2">Position History</div>
+                    <div class="table-responsive" style="max-height:220px;overflow-y:auto;">
+                        <table class="table table-sm table-borderless align-middle mb-0" style="font-size:0.82rem;">
+                            <thead style="color:#666; border-bottom:1px solid rgba(255,255,255,0.06);">
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Action</th>
+                                        <th>Size Δ</th>
+                                        <th>Price</th>
+                                        <th class="text-end">PnL</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for adj in t.trade.adjustments.all %}
+                                    <tr id="adj-row-{{ adj.id }}">
+                                        <td class="text-muted">{{ adj.timestamp|date:"M d, H:i" }}</td>
+                                        <td>
+                                            <span class="badge-status {% if adj.action == 'Open' or adj.action == 'Add' %}adj-badge-open{% else %}adj-badge-close{% endif %}">
+                                                {{ adj.action }}
+                                            </span>
+                                        </td>
+                                        <td>{{ adj.size_change }}</td>
+                                        <td>{{ adj.price|default:"—"|floatformat:4 }}</td>
+                                        <td class="text-end {% if adj.pnl > 0 %}text-green{% elif adj.pnl < 0 %}text-red{% endif %}">
+                                            {% if adj.pnl %}${{ adj.pnl|floatformat:2 }}{% else %}—{% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <button type="button" class="btn btn-link btn-sm p-0 me-2 text-primary" onclick="toggleAdjEdit('{{ adj.id }}')"><i class="fa-solid fa-pen-to-square"></i></button>
+                                            <button type="button" class="btn btn-link btn-sm p-0 text-danger" onclick="submitDeleteAdj('{{ adj.id }}')"><i class="fa-solid fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr id="adj-edit-{{ adj.id }}" style="display:none;" class="bg-black">
+                                        <td colspan="6">
+                                            <form method="post" action="{% url 'journal:adjustment_edit' adj.id %}">
+                                                {% csrf_token %}
+                                                <div class="row g-2 align-items-center">
+                                                    <div class="col-3">
+                                                        <label class="xsmall text-muted">Size Δ</label>
+                                                        <input type="number" step="any" name="size_change" value="{{ adj.size_change }}" class="form-control form-control-sm bg-dark border-secondary text-white">
+                                                    </div>
+                                                    <div class="col-3">
+                                                        <label class="xsmall text-muted">Price</label>
+                                                        <input type="number" step="any" name="price" value="{{ adj.price }}" class="form-control form-control-sm bg-dark border-secondary text-white">
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <label class="xsmall text-muted">Notes</label>
+                                                        <input type="text" name="notes" value="{{ adj.notes }}" class="form-control form-control-sm bg-dark border-secondary text-white">
+                                                    </div>
+                                                    <div class="col-2 text-end pt-3">
+                                                        <button type="submit" class="btn btn-xs btn-success"><i class="fa-solid fa-check"></i></button>
+                                                        <button type="button" class="btn btn-xs btn-secondary" onclick="toggleAdjEdit('{{ adj.id }}')"><i class="fa-solid fa-times"></i></button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                <tr><td colspan="6" class="text-center text-muted py-3">No adjustments recorded.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer px-4 d-flex justify-content-between" style="border-top:1px solid rgba(255,255,255,0.06);">
+                <div class="d-flex gap-2">
+                    <a href="{% url 'journal:trade_delete' t.trade.id %}" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash me-1"></i>Delete Trade</a>
+                    <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#adjustModal{{ t.trade.id }}"><i class="fa-solid fa-sliders me-1"></i>Add Modification</button>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="text-muted small me-3">ID #{{ t.trade.id }}</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ADJUSTMENT MODAL FOR THIS TRADE -->
+<div class="modal fade" id="adjustModal{{ t.trade.id }}" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow" style="background: #1a1a1a;">
+            <div class="modal-header bg-success text-white border-0">
+                <h5 class="modal-title"><i class="fa-solid fa-sliders me-2"></i>Adjust Position</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'journal:trade_adjust' t.trade.id %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <p class="text-muted mb-3"><strong>{{ t.trade.strategy_label|default:t.trade.trade_type }}</strong>
+                        · Current Size: <span class="fw-bold">{{ t.open_size }}</span></p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Action</label>
+                        <select name="action" class="form-select bg-dark border-secondary text-white">
+                            <option value="Add">Add Position</option>
+                            <option value="Reduce">Reduce Position</option>
+                            <option value="Close">Close Trade</option>
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-muted">Size</label>
+                            <input type="number" step="any" name="size" class="form-control bg-dark border-secondary text-white" value="0">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-muted">Price</label>
+                            <input type="number" step="any" name="price" class="form-control bg-dark border-secondary text-white">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-bold small text-muted">Notes</label>
+                        <input type="text" name="notes" class="form-control bg-dark border-secondary text-white">
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleAdjEdit(adjId) {
+        const row = document.getElementById('adj-row-' + adjId);
+        const editRow = document.getElementById('adj-edit-' + adjId);
+        if (editRow.style.display === 'none') {
+            editRow.style.display = 'table-row';
+            row.classList.add('opacity-50');
+        } else {
+            editRow.style.display = 'none';
+            row.classList.remove('opacity-50');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const createChart = (ctxId, type, labels, data, labelName, color) => {
+            const ctx = document.getElementById(ctxId).getContext('2d');
+            new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: labelName,
+                        data: data,
+                        backgroundColor: color,
+                        borderColor: color,
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(136, 136, 136, 0.1)' },
+                            ticks: { color: '#888' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#888' }
+                        }
+                    }
+                }
+            });
+        };
+
+        const strategyLabels = {{ strategy_labels|safe }};
+        const strategyData = {{ strategy_data|safe }};
+        createChart('strategyChart', 'bar', strategyLabels, strategyData, 'Net PnL', 'rgba(0, 242, 255, 0.6)');
+
+        const productLabels = {{ product_labels|safe }};
+        const productData = {{ product_data|safe }};
+        createChart('productChart', 'bar', productLabels, productData, 'Net PnL', 'rgba(156, 39, 176, 0.6)');
+
+        const groupLabels = {{ group_labels|safe }};
+        const groupData = {{ group_data|safe }};
+        createChart('groupChart', 'bar', groupLabels, groupData, 'Net PnL', 'rgba(76, 175, 80, 0.6)');
+
+        const dayLabels = {{ day_labels|safe }};
+        const dayData = {{ day_data|safe }};
+        createChart('dayChart', 'bar', dayLabels, dayData, 'Net PnL', 'rgba(255, 152, 0, 0.6)');
+
+        const weekLabels = {{ week_labels|safe }};
+        const weekData = {{ week_data|safe }};
+        createChart('weekChart', 'line', weekLabels, weekData, 'Net PnL', 'rgba(33, 150, 243, 0.8)');
+
+        const monthLabels = {{ month_labels|safe }};
+        const monthData = {{ month_data|safe }};
+        createChart('monthChart', 'bar', monthLabels, monthData, 'Net PnL', 'rgba(233, 30, 99, 0.6)');
+
+        const yearLabels = {{ year_labels|safe }};
+        const yearData = {{ year_data|safe }};
+        createChart('yearChart', 'bar', yearLabels, yearData, 'Net PnL', 'rgba(255, 235, 59, 0.6)');
+    });
+</script>
+
+<!-- Global Form for Adjustment Deletion -->
+<form id="deleteAdjForm" method="post" action="">
+    {% csrf_token %}
+</form>
+<script>
+function submitDeleteAdj(adjId) {
+    if (confirm('Delete this adjustment history?')) {
+        const form = document.getElementById('deleteAdjForm');
+        form.action = `/journal/adjustments/${adjId}/delete/`;
+        form.submit();
+    }
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'journal/base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow border-danger rounded-4">
+            <div class="card-header bg-danger text-white py-3 rounded-top-4">
+                <h5 class="mb-0"><i class="fa-solid fa-exclamation-triangle me-2"></i>Confirm Deletion</h5>
+            </div>
+            <div class="card-body text-center py-4">
+                <p class="mb-4">
+                    Are you sure you want to delete <strong>{{ trade.strategy_label|default:trade.trade_type }}</strong>
+                    ({{ trade.direction }})?
+                </p>
+                <form method="post">
+                    {% csrf_token %}
+                    <a href="{% url 'journal:dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

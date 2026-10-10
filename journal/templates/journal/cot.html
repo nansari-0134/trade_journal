@@ -1,0 +1,727 @@
+{% extends 'journal/base.html' %}
+{% block page_title %}COT Report — Trade Journal{% endblock %}
+{% block header_title %}COT Report{% endblock %}
+{% block content %}
+<style>
+  /* ===== COT PAGE STYLES ===== */
+  .cot-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 992px) {
+    .cot-layout { grid-template-columns: 1fr; }
+  }
+
+  .cot-hero {
+    background: linear-gradient(135deg, #0a1628 0%, #0d0d0d 60%);
+    border-radius: 24px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    border: 1px solid rgba(0, 242, 255, 0.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .cot-hero h1 { font-size: 1.8rem; font-weight: 700; margin: 0; }
+  .cot-hero .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; }
+
+  /* Sidebar Markets */
+  .market-sidebar {
+    background: var(--card-dark);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 20px;
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+  }
+  .market-search-wrap {
+    position: relative;
+    margin-bottom: 20px;
+  }
+  .market-search-wrap input {
+    width: 100%;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-main);
+    border-radius: 12px;
+    padding: 10px 16px 10px 40px;
+    font-size: 0.9rem;
+    outline: none;
+  }
+  .market-search-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+
+  .market-groups-scroll {
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 4px;
+  }
+  .market-groups-scroll::-webkit-scrollbar { width: 4px; }
+  .market-groups-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+  .market-group-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent-cyan);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 12px 0 6px 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    margin-top: 10px;
+  }
+  .market-item {
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    margin-top: 2px;
+  }
+  .market-item:hover { background: rgba(255,255,255,0.03); color: var(--text-main); }
+  .market-item.active { background: rgba(0,242,255,0.1); color: var(--accent-cyan); font-weight: 600; }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .stat-chip {
+    background: var(--card-dark);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 16px;
+    padding: 16px 20px;
+  }
+  .stat-chip .chip-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-chip .chip-val { font-size: 1.3rem; font-weight: 700; }
+  .chip-green { color: var(--accent-green); }
+  .chip-red { color: var(--accent-red); }
+  .chip-cyan { color: var(--accent-cyan); }
+  .chip-orange { color: #ff9800; }
+
+  /* Chart cards */
+  .chart-card {
+    background: var(--card-dark);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .chart-card h5 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+  .chart-card .chart-subtitle { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 18px; }
+  .chart-wrap { position: relative; }
+
+  .toggle-group {
+    background: rgba(255,255,255,0.04);
+    padding: 4px;
+    border-radius: 10px;
+    display: inline-flex;
+    gap: 4px;
+  }
+  .toggle-group .btn {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toggle-group .btn.active { background: var(--accent-cyan); color: #000; font-weight: 600; }
+
+  .year-range-select {
+    background: var(--card-dark);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-main);
+    border-radius: 10px;
+    padding: 5px 12px;
+    font-size: 0.82rem;
+    outline: none;
+  }
+  .last-update-badge {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.04);
+    border-radius: 20px;
+    padding: 3px 10px;
+  }
+
+  #loadingOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 9999;
+    align-items: center; justify-content: center; flex-direction: column; gap: 16px;
+  }
+  #loadingOverlay.active { display: flex; }
+  .spinner-ring {
+    width: 48px; height: 48px;
+    border: 3px solid rgba(0,242,255,0.15);
+    border-top-color: var(--accent-cyan);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #emptyState {
+    text-align: center;
+    padding: 80px 40px;
+    color: var(--text-muted);
+    background: var(--card-dark);
+    border-radius: 20px;
+    border: 1px dashed rgba(255,255,255,0.1);
+  }
+  #emptyState i { font-size: 3.5rem; margin-bottom: 20px; color: rgba(0,242,255,0.15); }
+</style>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay">
+  <div class="spinner-ring"></div>
+  <div style="color:var(--accent-cyan); font-size:0.9rem; font-weight:500;">Syncing CFTC Reports…</div>
+</div>
+
+<div class="cot-layout">
+  <!-- SIDEBAR: GROUPED PRODUCTS -->
+  <div class="market-sidebar">
+    <div class="market-search-wrap">
+      <i class="fa-solid fa-search"></i>
+      <input type="search" id="marketSearch" placeholder="Filter products…" autocomplete="off">
+    </div>
+    <div class="market-groups-scroll" id="marketSidebarList">
+      {% for group, items in grouped_markets.items %}
+      <div class="market-group-section">
+        <div class="market-group-title">{{ group }}</div>
+        {% for m in items %}
+        <div class="market-item" data-code="{{ m.code }}" data-name="{{ m.name }}">
+          {{ m.name }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="cot-main-content">
+    <div class="cot-hero">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="fa-solid fa-chart-column text-cyan"></i>
+            <h1 class="text-white">COT Explorer</h1>
+          </div>
+          <div class="subtitle">Analyze speculator and hedger commitments from CFTC legacy reports.
+            <span class="ms-2 badge bg-dark border border-secondary text-muted" style="font-size:0.7rem;">
+              <i class="fa-solid fa-database me-1"></i>{{ market_count|default:"—" }} markets available
+            </span>
+          </div>
+        </div>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+          <span class="last-update-badge" id="lastUpdateBadge"><i class="fa-regular fa-clock me-1"></i>No market selected</span>
+          <button id="btnFetch" class="btn btn-sm btn-outline-cyan" style="border-radius:10px;" disabled>
+            <i class="fa-solid fa-rotate me-1"></i>Sync Latest
+          </button>
+          <button id="btnSyncAllMarkets" class="btn btn-sm" style="border-radius:10px; background:rgba(156,39,176,0.15); color:#ce93d8; border:1px solid rgba(156,39,176,0.3);" title="Refresh the full CFTC market list (1300+ markets)">
+            <i class="fa-solid fa-cloud-arrow-down me-1"></i>Sync All Markets
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-row" id="statsRow" style="display:none;">
+      <div class="stat-chip">
+        <div class="chip-label">Non-Commercial Net</div>
+        <div class="chip-val" id="statNcNet">—</div>
+      </div>
+      <div class="stat-chip">
+        <div class="chip-label">Commercial Net</div>
+        <div class="chip-val" id="statCmNet">—</div>
+      </div>
+      <div class="stat-chip">
+        <div class="chip-label">Non-Reportable Net</div>
+        <div class="chip-val" id="statNrNet">—</div>
+      </div>
+      <div class="stat-chip">
+        <div class="chip-label">Open Interest</div>
+        <div class="chip-val chip-cyan" id="statOI">—</div>
+      </div>
+      <div class="stat-chip">
+        <div class="chip-label">Report Date</div>
+        <div class="chip-val" style="font-size:1rem; padding-top:4px;" id="statDate">—</div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="emptyState">
+      <i class="fa-solid fa-chart-line"></i>
+      <h4 class="text-white">Select a Product to Begin</h4>
+      <p class="small">Choose a market from the sidebar to view historical positioning, seasonality, and open interest trends.</p>
+    </div>
+
+    <!-- Charts UI -->
+    <div id="chartsContainer" style="display:none;">
+      <!-- Main Positions -->
+      <div class="chart-card">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+          <div>
+            <h5>Net Positions Over Time</h5>
+            <div class="chart-subtitle">Speculators vs Hedgers vs Small Traders (Net Long)</div>
+          </div>
+          <div class="toggle-group" id="posModes">
+            <button class="btn active" data-mode="all">All</button>
+            <button class="btn" data-mode="nc">Spec</button>
+            <button class="btn" data-mode="cm">Hedge</button>
+            <button class="btn" data-mode="nr">Small</button>
+          </div>
+        </div>
+        <div class="chart-wrap" style="height:350px;">
+          <canvas id="posChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Seasonality (Net Positions) -->
+      <div class="chart-card">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+          <div>
+            <h5>Seasonality Analysis (Net Positions)</h5>
+            <div class="chart-subtitle" id="seaSubtitle">Average positioning bias by week of year</div>
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" id="seaZerobase">
+              <label class="form-check-label text-muted small" style="margin-top:2px;" for="seaZerobase">Zerobase</label>
+            </div>
+            <div class="toggle-group" id="seaTypeToggle">
+              <button class="btn active" data-type="weekly">Weekly</button>
+              <button class="btn" data-type="monthly">Monthly</button>
+            </div>
+            <select class="year-range-select" id="seaFilter">
+              <option value="all">All years</option>
+              <option value="10">Last 10 yrs</option>
+              <option value="5">Last 5 yrs</option>
+              <option value="3" selected>Last 3 yrs</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-wrap" style="height:320px;">
+          <canvas id="seaChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Seasonality (Open Interest) -->
+      <div class="chart-card">
+        <div>
+          <h5>Seasonality Analysis (Open Interest)</h5>
+          <div class="chart-subtitle" id="oiSeaSubtitle">Historical market participation cycles</div>
+        </div>
+        <div class="chart-wrap" style="height:320px;">
+          <canvas id="oiSeaChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Open Interest (Historical) -->
+      <div class="chart-card">
+        <h5>Market Participation (Open Interest Time Series)</h5>
+        <div class="chart-subtitle">Total outstanding contracts over time</div>
+        <div class="chart-wrap" style="height:200px;">
+          <canvas id="oiChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ===== STATE =====
+let posChartInst = null, seaChartInst = null, oiChartInst = null, oiSeaChartInst = null;
+let rawTimeSeries = [];
+let rawSeasonalityWeekly = {};
+let rawSeasonalityMonthly = {};
+let activeCode = null;
+let activeSeaType = 'weekly';
+
+// ===== SIDEBAR LOGIC =====
+const sidebarItems = document.querySelectorAll('.market-item');
+const searchInput = document.getElementById('marketSearch');
+
+sidebarItems.forEach(item => {
+  item.addEventListener('click', () => {
+    activeCode = item.dataset.code;
+    sidebarItems.forEach(i => i.classList.toggle('active', i === item));
+    document.getElementById('btnFetch').disabled = false;
+    loadData(activeCode, false);
+  });
+});
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase();
+  document.querySelectorAll('.market-group-section').forEach(sect => {
+    let hasVisible = false;
+    sect.querySelectorAll('.market-item').forEach(item => {
+      const match = item.dataset.name.toLowerCase().includes(q) || item.dataset.code.toLowerCase().includes(q);
+      item.style.display = match ? '' : 'none';
+      if (match) hasVisible = true;
+    });
+    sect.style.display = hasVisible ? '' : 'none';
+  });
+});
+
+// ===== FETCH & LOAD =====
+document.getElementById('btnFetch').addEventListener('click', () => {
+  if (activeCode) loadData(activeCode, true);
+});
+
+async function loadData(code, triggerFetch) {
+  showLoading();
+  try {
+    const url = `{% url 'journal:api_cot_data' %}?market_code=${encodeURIComponent(code)}&trigger_fetch=${triggerFetch ? 1 : 0}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (data.fetch_error) alert('Fetch error: ' + data.fetch_error);
+
+    rawTimeSeries = data.time_series || [];
+    rawSeasonalityWeekly = data.seasonality_weekly || {};
+    rawSeasonalityMonthly = data.seasonality_monthly || {};
+
+    if (rawTimeSeries.length === 0 && !triggerFetch) {
+      document.getElementById('emptyState').querySelector('p').innerHTML = 
+        `No local data for this market. Click <strong>Sync Latest</strong> to benchmark against CFTC records.`;
+      showResults(false);
+      return;
+    }
+
+    if (data.latest_date) {
+      const badge = document.getElementById('lastUpdateBadge');
+      badge.innerHTML = `<i class="fa-regular fa-clock me-1"></i>Latest: ${data.latest_date}`;
+      if (data.new_rows > 0) badge.innerHTML += ` <span class="badge bg-success ms-1">+${data.new_rows}</span>`;
+    }
+
+    updateStats();
+    renderPosChart('all');
+    renderSeasonalityChart();
+    renderOiSeasonalityChart();
+    renderOiChart();
+    showResults(true);
+  } catch (err) {
+    console.error(err);
+    alert('Failed to load data.');
+  } finally {
+    hideLoading();
+  }
+}
+
+// ===== CHARTS & UI =====
+function updateStats() {
+  const last = rawTimeSeries[rawTimeSeries.length - 1];
+  if (!last) return;
+  const setVal = (id, val, isNet = true) => {
+    const el = document.getElementById(id);
+    el.textContent = isNet ? (val >= 0 ? '+' : '') + val.toLocaleString() : val.toLocaleString();
+    el.className = 'chip-val ' + (isNet ? (val >= 0 ? 'chip-green' : 'chip-red') : 'chip-cyan');
+  };
+  setVal('statNcNet', last.noncomm_net);
+  setVal('statCmNet', last.comm_net);
+  setVal('statNrNet', last.nonrept_net);
+  setVal('statOI', last.open_interest, false);
+  document.getElementById('statDate').textContent = last.date;
+  document.getElementById('statsRow').style.display = 'grid';
+}
+
+function renderPosChart(mode) {
+  const labels = rawTimeSeries.map(r => r.date);
+  const datasets = [];
+  const cfg = (label, color, key, isFilled) => ({
+    label, data: rawTimeSeries.map(r => r[key]),
+    borderColor: color, backgroundColor: color + '10',
+    fill: isFilled, tension: 0.2, pointRadius: 0, borderWidth: 2
+  });
+  
+  if (mode === 'all' || mode === 'nc') datasets.push(cfg('Non-Commercial', '#00f2ff', 'noncomm_net', mode==='nc'));
+  if (mode === 'all' || mode === 'cm') datasets.push(cfg('Commercial', '#f44336', 'comm_net', mode==='cm'));
+  if (mode === 'all' || mode === 'nr') datasets.push(cfg('Non-Reportable', '#ff9800', 'nonrept_net', mode==='nr'));
+
+  if (posChartInst) posChartInst.destroy();
+  posChartInst = new Chart(document.getElementById('posChart'), {
+    type: 'line', data: { labels, datasets },
+    options: sharedOpts('Contracts', true)
+  });
+}
+
+function renderSeasonalityChart() {
+  const yearsVal = document.getElementById('seaFilter').value;
+  const yearsCount = yearsVal === 'all' ? 999 : parseInt(yearsVal);
+  const currentYear = new Date().getFullYear();
+  const minYear = yearsCount === 999 ? 0 : currentYear - yearsCount;
+  const filtered = rawTimeSeries.filter(r => parseInt(r.date.split('-')[0]) >= minYear);
+  
+  const yearData = {};
+  const allYears = new Set();
+  filtered.forEach(r => {
+    const yr = parseInt(r.date.split('-')[0]);
+    const key = activeSeaType === 'weekly' ? getWeek(r.date) : parseInt(r.date.split('-')[1]);
+    allYears.add(yr);
+    if (!yearData[yr]) yearData[yr] = {};
+    if (!yearData[yr][key]) yearData[yr][key] = { nc: [], cm: [] };
+    yearData[yr][key].nc.push(r.noncomm_net);
+    yearData[yr][key].cm.push(r.comm_net);
+  });
+
+  const sortedYears = Array.from(allYears).sort((a,b) => a - b);
+  const maxLabel = activeSeaType === 'weekly' ? 53 : 12;
+  const keys = Array.from({length: maxLabel}, (_, i) => i + 1);
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const labels = activeSeaType === 'weekly' ? keys.map(k=>'W'+k) : keys.map(k=>monthNames[k-1]);
+  
+  const isZerobase = document.getElementById('seaZerobase').checked;
+  const getOffset = (arr) => arr.find(v => v !== null) || 0;
+
+  const datasets = [];
+  sortedYears.forEach((yr, idx) => {
+    const isCurrentYear = yr === currentYear;
+    const hue = (idx * 137.5) % 360;
+    const rawData = keys.map(k => yearData[yr][k] ? Math.round(yearData[yr][k].nc.reduce((a,b)=>a+b,0) / yearData[yr][k].nc.length) : null);
+    const offset = isZerobase ? getOffset(rawData) : 0;
+    datasets.push({
+      label: yr.toString() + (isCurrentYear ? ' (Current)' : ''),
+      data: rawData.map(v => v !== null ? v - offset : null),
+      borderColor: isCurrentYear ? `hsla(${hue}, 70%, 60%, 0.8)` : `hsla(${hue}, 70%, 50%, 0.35)`,
+      borderWidth: isCurrentYear ? 2.5 : 1.5,
+      pointRadius: isCurrentYear ? 2 : 0,
+      tension: 0.3, fill: false, spanGaps: true, zIndex: isCurrentYear ? 5 : 1
+    });
+  });
+
+  const avgAcc = {};
+  filtered.forEach(r => {
+    const key = activeSeaType === 'weekly' ? getWeek(r.date) : parseInt(r.date.split('-')[1]);
+    if (!avgAcc[key]) avgAcc[key] = { nc: [], cm: [] };
+    avgAcc[key].nc.push(r.noncomm_net);
+    avgAcc[key].cm.push(r.comm_net);
+  });
+
+  const avgNcRaw = keys.map(k => avgAcc[k] ? Math.round(avgAcc[k].nc.reduce((a,b)=>a+b,0) / avgAcc[k].nc.length) : null);
+  const avgNcOffset = isZerobase ? getOffset(avgNcRaw) : 0;
+  datasets.push({
+    label: 'AVG (Non-Comm)',
+    data: avgNcRaw.map(v => v !== null ? v - avgNcOffset : null),
+    borderColor: '#00f2fe', borderWidth: 3, pointRadius: 4, pointHoverRadius: 6, tension: 0.3, fill: false, zIndex: 10
+  });
+
+  const avgCmRaw = keys.map(k => avgAcc[k] ? Math.round(avgAcc[k].cm.reduce((a,b)=>a+b,0) / avgAcc[k].cm.length) : null);
+  const avgCmOffset = isZerobase ? getOffset(avgCmRaw) : 0;
+  datasets.push({
+    label: 'AVG (Comm)',
+    data: avgCmRaw.map(v => v !== null ? v - avgCmOffset : null),
+    borderColor: '#f9d423', borderWidth: 3, pointRadius: 4, pointHoverRadius: 6, tension: 0.3, fill: false, zIndex: 10
+  });
+
+  if (seaChartInst) seaChartInst.destroy();
+  seaChartInst = new Chart(document.getElementById('seaChart'), {
+    type: 'line', data: { labels, datasets },
+    options: {
+        ...sharedOpts('Net Pos', false),
+        plugins: {
+            ...sharedOpts('Net Pos', false).plugins,
+            legend: { filter: (item) => item.text.includes('AVG') || item.text.includes('(Current)') },
+            subtitle: { display: true, text: `${activeSeaType.toUpperCase()} SEASONALITY (${yearsVal === 'all' ? 'ALL' : yearsVal} YR RANGE)`, color: '#94a3b8', font: { size: 12 } },
+            tooltip: { 
+                mode: 'index', intersect: false, 
+                filter: (item) => item.datasetIndex >= datasets.length - 2 || item.formattedValue !== 'null',
+                callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}` }
+            }
+        },
+        scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8' } }, y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } } }
+    }
+  });
+  document.getElementById('seaSubtitle').textContent = `Individual years overlay + bold average benchmark (${yearsVal === 'all' ? 'All Time' : yearsVal + ' yrs'})`;
+}
+
+function renderOiSeasonalityChart() {
+  const yearsVal = document.getElementById('seaFilter').value;
+  const yearsCount = yearsVal === 'all' ? 999 : parseInt(yearsVal);
+  const currentYear = new Date().getFullYear();
+  const minYear = yearsCount === 999 ? 0 : currentYear - yearsCount;
+  const filtered = rawTimeSeries.filter(r => parseInt(r.date.split('-')[0]) >= minYear);
+
+  const yearData = {};
+  const allYears = new Set();
+  filtered.forEach(r => {
+    const yr = parseInt(r.date.split('-')[0]);
+    const key = activeSeaType === 'weekly' ? getWeek(r.date) : parseInt(r.date.split('-')[1]);
+    allYears.add(yr);
+    if (!yearData[yr]) yearData[yr] = {};
+    if (!yearData[yr][key]) yearData[yr][key] = [];
+    yearData[yr][key].push(r.open_interest);
+  });
+
+  const sortedYears = Array.from(allYears).sort((a,b) => a - b);
+  const maxLabel = activeSeaType === 'weekly' ? 53 : 12;
+  const keys = Array.from({length: maxLabel}, (_, i) => i + 1);
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const labels = activeSeaType === 'weekly' ? keys.map(k=>'W'+k) : keys.map(k=>monthNames[k-1]);
+
+  const isZerobase = document.getElementById('seaZerobase').checked;
+  const getOffset = (arr) => arr.find(v => v !== null) || 0;
+
+  const datasets = [];
+  sortedYears.forEach((yr, idx) => {
+    const isCurrentYear = yr === currentYear;
+    const hue = (idx * 137.5) % 360;
+    const rawData = keys.map(k => yearData[yr][k] ? Math.round(yearData[yr][k].reduce((a,b)=>a+b,0) / yearData[yr][k].length) : null);
+    const offset = isZerobase ? getOffset(rawData) : 0;
+    datasets.push({
+      label: yr.toString() + (isCurrentYear ? ' (Current)' : ''),
+      data: rawData.map(v => v !== null ? v - offset : null),
+      borderColor: isCurrentYear ? `hsla(${hue}, 70%, 60%, 0.8)` : `hsla(${hue}, 70%, 50%, 0.35)`,
+      borderWidth: isCurrentYear ? 2.5 : 1.5,
+      pointRadius: isCurrentYear ? 2 : 0,
+      tension: 0.3, fill: false, spanGaps: true, zIndex: isCurrentYear ? 5 : 1
+    });
+  });
+
+  const avgAcc = {};
+  filtered.forEach(r => {
+    const key = activeSeaType === 'weekly' ? getWeek(r.date) : parseInt(r.date.split('-')[1]);
+    if (!avgAcc[key]) avgAcc[key] = [];
+    avgAcc[key].push(r.open_interest);
+  });
+
+  const avgRaw = keys.map(k => avgAcc[k] ? Math.round(avgAcc[k].reduce((a,b)=>a+b,0) / avgAcc[k].length) : null);
+  const avgOffset = isZerobase ? getOffset(avgRaw) : 0;
+  datasets.push({
+    label: 'AVG Open Interest',
+    data: avgRaw.map(v => v !== null ? v - avgOffset : null),
+    borderColor: '#9c27b0', borderWidth: 3, pointRadius: 4, pointHoverRadius: 6, tension: 0.3, fill: false, zIndex: 10
+  });
+
+  if (oiSeaChartInst) oiSeaChartInst.destroy();
+  oiSeaChartInst = new Chart(document.getElementById('oiSeaChart'), {
+    type: 'line', data: { labels, datasets },
+    options: {
+        ...sharedOpts('Contracts', false),
+        plugins: {
+            ...sharedOpts('Contracts', false).plugins,
+            legend: { filter: (item) => item.text.includes('AVG') || item.text.includes('(Current)') },
+            subtitle: { display: true, text: `OI ${activeSeaType.toUpperCase()} SEASONALITY (${yearsVal === 'all' ? 'ALL' : yearsVal} YR RANGE)`, color: '#94a3b8', font: { size: 12 } },
+            tooltip: { 
+                mode: 'index', intersect: false, 
+                filter: (item) => item.datasetIndex >= datasets.length - 1 || item.formattedValue !== 'null',
+                callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}` }
+            }
+        },
+        scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8' } }, y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } } }
+    }
+  });
+  document.getElementById('oiSeaSubtitle').textContent = `Historical market participation cycles (+ ${yearsVal === 'all' ? 'All Time' : yearsVal + ' yrs'} average)`;
+}
+
+function renderOiChart() {
+  const labels = rawTimeSeries.map(r => r.date);
+  if (oiChartInst) oiChartInst.destroy();
+  oiChartInst = new Chart(document.getElementById('oiChart'), {
+    type: 'line',
+    data: { labels, datasets: [{
+      label: 'Open Interest', data: rawTimeSeries.map(r=>r.open_interest),
+      borderColor: '#9c27b0', backgroundColor: '#9c27b010', fill: true, tension: 0.2, pointRadius: 0
+    }]},
+    options: sharedOpts('Contracts', false)
+  });
+}
+
+function sharedOpts(yLabel, zeroLine) {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'top', labels: { color: '#888', usePointStyle: true, boxWidth: 10, font: { size: 11 } } },
+      tooltip: { 
+        backgroundColor: '#111', borderColor: '#333', borderWidth: 1, padding: 12,
+        callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}` }
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#666', font: { size: 10 }, maxTicksLimit: 12 } },
+      y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#666', font: { size: 10 }, callback: v => v.toLocaleString() } }
+    }
+  };
+}
+
+// ===== UTILS =====
+function getWeek(dStr) {
+  const d = new Date(dStr);
+  const start = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(((d - start) / 86400000 + start.getDay() + 1) / 7);
+}
+function showLoading() { document.getElementById('loadingOverlay').classList.add('active'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('active'); }
+function showResults(show) {
+  document.getElementById('emptyState').style.display = show ? 'none' : 'block';
+  document.getElementById('chartsContainer').style.display = show ? 'block' : 'none';
+  document.getElementById('statsRow').style.display = show ? 'grid' : 'none';
+}
+
+// ===== INTERNALS =====
+document.getElementById('posModes').querySelectorAll('.btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.getElementById('posModes').querySelectorAll('.btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    renderPosChart(b.dataset.mode);
+  });
+});
+document.getElementById('seaTypeToggle').querySelectorAll('.btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.getElementById('seaTypeToggle').querySelectorAll('.btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    activeSeaType = b.dataset.type;
+    renderSeasonalityChart();
+    renderOiSeasonalityChart();
+  });
+});
+document.getElementById('seaFilter').addEventListener('change', () => {
+  renderSeasonalityChart();
+  renderOiSeasonalityChart();
+});
+document.getElementById('seaZerobase').addEventListener('change', () => {
+  renderSeasonalityChart();
+  renderOiSeasonalityChart();
+});
+// ===== SYNC ALL MARKETS =====
+document.getElementById('btnSyncAllMarkets').addEventListener('click', async () => {
+  const btn = document.getElementById('btnSyncAllMarkets');
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Syncing…';
+  showLoading();
+  try {
+    const resp = await fetch('{% url "journal:api_cot_sync_markets" %}', {method: 'GET'});
+    const data = await resp.json();
+    if (data.success) {
+      const msg = `Synced ${data.total.toLocaleString()} markets from CFTC. Reloading sidebar…`;
+      alert(msg);
+      window.location.reload();
+    } else {
+      alert('Failed to sync markets: ' + (data.error || 'Unknown error'));
+    }
+  } catch (e) {
+    alert('Network error: ' + e.message);
+  } finally {
+    hideLoading();
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+  }
+});
+
+</script>
+{% endblock %}

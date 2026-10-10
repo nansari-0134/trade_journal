@@ -1,0 +1,383 @@
+{% extends 'journal/base.html' %}
+{% block page_title %}Palm Oil Dashboard — Trade Journal{% endblock %}
+{% block header_title %}Palm Oil Fundamentals{% endblock %}
+
+{% block content %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 350px;
+        width: 100%;
+    }
+    .premium-card {
+        background: #161616;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        padding: 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .text-highlight { color: #00f2ff; }
+</style>
+
+<div class="row">
+    <!-- Prices and OI -->
+    <div class="col-lg-6">
+        <div class="premium-card">
+            <h5 class="card-title"><i class="fa-solid fa-chart-line text-highlight"></i> Forward Curve (Bursa Malaysia)</h5>
+            <div class="chart-container">
+                <canvas id="forwardCurveChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="premium-card">
+            <h5 class="card-title"><i class="fa-solid fa-chart-bar text-highlight"></i> Open Interest History</h5>
+            <div class="chart-container">
+                <canvas id="oiHistoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- MPOB Fundamentals -->
+    <div class="col-lg-12">
+        <div class="premium-card">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="card-title mb-0"><i class="fa-solid fa-industry text-highlight"></i> MPOB Fundamentals</h5>
+                <select id="mpobMetricSelect" class="form-select form-select-sm w-auto bg-dark text-white border-secondary">
+                    <option value="end_stocks">Ending Stocks</option>
+                    <option value="production">Production</option>
+                    <option value="exports">Exports</option>
+                    <option value="imports">Imports</option>
+                    <option value="local_consumption">Local Consumption</option>
+                </select>
+            </div>
+            <div class="chart-container" style="height: 400px;">
+                <canvas id="mpobChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- MPOB Stock Change -->
+    <div class="col-lg-4">
+        <div class="premium-card">
+            <h5 class="card-title"><i class="fa-solid fa-boxes-stacked text-highlight"></i> MoM Stock Change</h5>
+            <div class="chart-container">
+                <canvas id="stockChangeChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Production Surprise -->
+    <div class="col-lg-4">
+        <div class="premium-card">
+            <h5 class="card-title"><i class="fa-solid fa-seedling text-highlight"></i> Production Surprise</h5>
+            <div class="chart-container">
+                <canvas id="prodSurpriseChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Export Pace -->
+    <div class="col-lg-4">
+        <div class="premium-card">
+            <h5 class="card-title"><i class="fa-solid fa-ship text-highlight"></i> Export Pace (SGS/ITS vs MPOB)</h5>
+            <div class="chart-container">
+                <canvas id="exportPaceChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Chart instances
+    let forwardCurveChart, oiHistoryChart, mpobChart, stockChangeChart, prodSurpriseChart, exportPaceChart;
+    
+    // Global Data
+    let globalData = {};
+    
+    // Fetch data
+    fetch("{% url 'journal:api_palm_oil_data' %}")
+        .then(response => response.json())
+        .then(data => {
+            globalData = data;
+            renderForwardCurve(data.prices);
+            renderOiHistory(data.oi_history);
+            renderMpobChart(data.mpob_data, 'end_stocks');
+            renderStockChange(data.mpob_data);
+            renderProdSurprise(data.mpob_data);
+            renderExportPace(data.mpob_data, data.surveyor_data);
+            
+            // Event listener for MPOB metric select
+            document.getElementById('mpobMetricSelect').addEventListener('change', function(e) {
+                renderMpobChart(data.mpob_data, e.target.value);
+            });
+        });
+
+    // 1. Forward Curve
+    function renderForwardCurve(prices) {
+        if (!prices || prices.length === 0) return;
+        const ctx = document.getElementById('forwardCurveChart').getContext('2d');
+        const labels = prices.map(p => p.contract);
+        const data = prices.map(p => p.close);
+        
+        forwardCurveChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Close Price (MYR)',
+                    data: data,
+                    borderColor: '#00f2ff',
+                    backgroundColor: 'rgba(0, 242, 255, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    pointBackgroundColor: '#00f2ff'
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#aaa' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#aaa' } }
+                }
+            }
+        });
+    }
+
+    // 2. OI History
+    function renderOiHistory(oi_history) {
+        if (!oi_history || oi_history.length === 0) return;
+        const ctx = document.getElementById('oiHistoryChart').getContext('2d');
+        const labels = oi_history.map(d => d.date);
+        const data = oi_history.map(d => d.total_oi);
+        
+        oiHistoryChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Total Open Interest',
+                    data: data,
+                    backgroundColor: 'rgba(168, 85, 247, 0.5)',
+                    borderColor: '#a855f7',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#aaa' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#aaa' } }
+                }
+            }
+        });
+    }
+
+    // 3. MPOB Fundamentals (Multi-year seasonality)
+    function renderMpobChart(mpob_data, metric) {
+        if (!mpob_data || mpob_data.length === 0) return;
+        const ctx = document.getElementById('mpobChart').getContext('2d');
+        
+        // Group data by year
+        const dataByYear = {};
+        mpob_data.forEach(d => {
+            if (!dataByYear[d.year]) dataByYear[d.year] = Array(12).fill(null);
+            dataByYear[d.year][d.month - 1] = d[metric];
+        });
+        
+        const years = Object.keys(dataByYear).sort();
+        const datasets = years.map((year, index) => {
+            const isCurrentYear = index === years.length - 1;
+            return {
+                label: year,
+                data: dataByYear[year],
+                borderColor: isCurrentYear ? '#00f2ff' : `hsl(${200 + index*30}, 50%, 40%)`,
+                borderWidth: isCurrentYear ? 3 : 2,
+                borderDash: isCurrentYear ? [] : [5, 5],
+                tension: 0.3
+            };
+        });
+
+        if (mpobChart) mpobChart.destroy();
+        
+        mpobChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+                datasets: datasets
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#fff' } }
+                },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#aaa' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#aaa' } }
+                }
+            }
+        });
+    }
+
+    // 4. MoM Stock Change
+    function renderStockChange(mpob_data) {
+        if (!mpob_data || mpob_data.length < 2) return;
+        const ctx = document.getElementById('stockChangeChart').getContext('2d');
+        
+        const labels = [];
+        const data = [];
+        const bgColors = [];
+        
+        for (let i = 1; i < mpob_data.length; i++) {
+            const curr = mpob_data[i];
+            const prev = mpob_data[i-1];
+            if (curr.end_stocks != null && prev.end_stocks != null) {
+                const diff = curr.end_stocks - prev.end_stocks;
+                labels.push(`${curr.year}-${String(curr.month).padStart(2,'0')}`);
+                data.push(diff);
+                bgColors.push(diff >= 0 ? 'rgba(239, 68, 68, 0.7)' : 'rgba(34, 197, 94, 0.7)'); // Red if stocks build, green if draw
+            }
+        }
+        
+        stockChangeChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels.slice(-12), // Last 12 months
+                datasets: [{
+                    label: 'MoM Stock Change',
+                    data: data.slice(-12),
+                    backgroundColor: bgColors.slice(-12)
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#aaa', font: {size: 9} } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#aaa' } }
+                }
+            }
+        });
+    }
+
+    // 5. Production Surprise (Simplified: deviation from 3yr average for that month)
+    function renderProdSurprise(mpob_data) {
+        if (!mpob_data || mpob_data.length === 0) return;
+        const ctx = document.getElementById('prodSurpriseChart').getContext('2d');
+        
+        const monthlyAverages = Array(13).fill(0);
+        const monthlyCounts = Array(13).fill(0);
+        
+        // Calculate historical averages (excluding current year)
+        const currentYear = Math.max(...mpob_data.map(d => d.year));
+        mpob_data.forEach(d => {
+            if (d.year < currentYear && d.production != null) {
+                monthlyAverages[d.month] += d.production;
+                monthlyCounts[d.month] += 1;
+            }
+        });
+        
+        for(let i=1; i<=12; i++) {
+            if(monthlyCounts[i] > 0) monthlyAverages[i] /= monthlyCounts[i];
+        }
+        
+        // Calculate surprises for the last 12 available data points
+        const recentData = mpob_data.slice(-12);
+        const labels = recentData.map(d => `${d.year}-${String(d.month).padStart(2,'0')}`);
+        const data = recentData.map(d => {
+            const avg = monthlyAverages[d.month];
+            if (avg && d.production != null) return ((d.production - avg) / avg) * 100; // % deviation
+            return 0;
+        });
+        const bgColors = data.map(val => val >= 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(239, 68, 68, 0.7)');
+        
+        prodSurpriseChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '% Surprise vs Hist Avg',
+                    data: data,
+                    backgroundColor: bgColors
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#aaa', font: {size: 9} } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#aaa', callback: function(value){ return value + '%';} } }
+                }
+            }
+        });
+    }
+
+    // 6. Export Pace
+    function renderExportPace(mpob_data, surveyor_data) {
+        const ctx = document.getElementById('exportPaceChart').getContext('2d');
+        
+        // For simplicity, just plot the last 6 months of full_month surveyor vs MPOB export
+        const recentSurveyor = surveyor_data.filter(s => s.surveyor === 'SGS').slice(-6);
+        const labels = [];
+        const mpobExports = [];
+        const sgsExports = [];
+        
+        recentSurveyor.forEach(s => {
+            labels.push(`${s.year}-${String(s.month).padStart(2,'0')}`);
+            sgsExports.push(s.full_month || (s.day_1_to_25 * 1.2)); // extrapolate if needed
+            const mpobMatch = mpob_data.find(m => m.year === s.year && m.month === s.month);
+            mpobExports.push(mpobMatch ? mpobMatch.exports : null);
+        });
+        
+        exportPaceChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'SGS Est.',
+                        data: sgsExports,
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)'
+                    },
+                    {
+                        label: 'MPOB Actual',
+                        data: mpobExports,
+                        backgroundColor: 'rgba(245, 158, 11, 0.7)'
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: {color: '#fff'}, position: 'bottom' } },
+                scales: {
+                    x: { ticks: { color: '#aaa' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#aaa' } }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

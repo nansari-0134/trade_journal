@@ -1,0 +1,174 @@
+{% extends "journal/base.html" %}
+{% block page_title %}Calendar — Trade Journal{% endblock %}
+{% block header_title %}Calendar{% endblock %}
+
+{% block content %}
+<style>
+    .calendar-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        animation: fadeIn 0.5s ease;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        background: var(--card-dark);
+        padding: 20px 30px;
+        border-radius: 20px;
+        border: 1px solid var(--border-color);
+    }
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 12px;
+    }
+    .day-header {
+        text-align: center;
+        font-weight: 700;
+        color: var(--text-muted);
+        padding: 10px;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+    }
+    .calendar-day {
+        min-height: 130px;
+        background: var(--card-dark);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    .calendar-day:hover {
+        border-color: var(--accent-cyan);
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .day-num {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: auto;
+        color: var(--text-muted);
+    }
+    .is-current-month .day-num {
+        color: var(--text-main);
+    }
+    .not-current-month {
+        opacity: 0.2;
+    }
+    .pnl-block {
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .gross-pnl {
+        color: var(--text-muted);
+        font-size: 0.65rem;
+        font-weight: 500;
+    }
+    .net-pnl {
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+    .day-win {
+        border-top: 3px solid var(--accent-green);
+        background: linear-gradient(180deg, rgba(76, 175, 80, 0.05) 0%, transparent 100%);
+    }
+    .day-loss {
+        border-top: 3px solid var(--accent-red);
+        background: linear-gradient(180deg, rgba(244, 67, 54, 0.05) 0%, transparent 100%);
+    }
+    .today-marker {
+        border: 2px solid var(--accent-cyan) !important;
+    }
+    .today-label {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: var(--accent-cyan);
+        color: #000;
+        font-size: 0.6rem;
+        padding: 2px 8px;
+        border-bottom-left-radius: 8px;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+    .btn-nav {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .btn-nav:hover {
+        background: var(--accent-cyan);
+        color: #000;
+        border-color: var(--accent-cyan);
+    }
+</style>
+
+<div class="calendar-container">
+    <div class="calendar-header shadow-lg">
+        <div>
+            <h2 class="mb-0 fw-bold">{{ month_name }} <span class="text-cyan">{{ current_year }}</span></h2>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="?month={{ prev_month }}&year={{ prev_year }}" class="btn-nav text-decoration-none">
+                <i class="fa-solid fa-chevron-left me-2"></i>Prev
+            </a>
+            <a href="?month={{ today.month }}&year={{ today.year }}" class="btn-nav text-decoration-none">
+                Today
+            </a>
+            <a href="?month={{ next_month }}&year={{ next_year }}" class="btn-nav text-decoration-none">
+                Next<i class="fa-solid fa-chevron-right ms-2"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="calendar-grid">
+        <div class="day-header">Sunday</div>
+        <div class="day-header">Monday</div>
+        <div class="day-header">Tuesday</div>
+        <div class="day-header">Wednesday</div>
+        <div class="day-header">Thursday</div>
+        <div class="day-header">Friday</div>
+        <div class="day-header">Saturday</div>
+
+        {% for week in calendar_data %}
+            {% for d in week %}
+                <div class="calendar-day {% if not d.is_current_month %}not-current-month{% else %}is-current-month{% endif %} 
+                            {% if d.is_today %}today-marker{% endif %}
+                            {% if d.stats.net > 0 %}day-win{% elif d.stats.net < 0 %}day-loss{% endif %}">
+                    
+                    {% if d.is_today %}<div class="today-label">Today</div>{% endif %}
+                    
+                    <div class="day-num">{{ d.date.day }}</div>
+                    
+                    {% if d.stats.gross != 0 or d.stats.net != 0 %}
+                    <div class="pnl-block">
+                        <div class="gross-pnl">G: {% if d.stats.gross > 0 %}+{% endif %}${{ d.stats.gross|floatformat:2 }}</div>
+                        <div class="net-pnl {% if d.stats.net >= 0 %}text-green{% else %}text-red{% endif %}">
+                            {% if d.stats.net > 0 %}+{% endif %}${{ d.stats.net|floatformat:2 }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,314 @@
+{% extends 'journal/base.html' %}
+{% block page_title %}Planned Trades — Trade Journal{% endblock %}
+{% block header_title %}Planned Trades{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold"><i class="fa-regular fa-calendar-check text-info me-2"></i>Planned Trades</h3>
+    <div class="d-flex gap-2">
+        <a href="{% url 'journal:trade_new' %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-bolt me-1"></i>New Trade</a>
+        <a href="{% url 'journal:dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left me-1"></i>Dashboard</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- LEFT: ADD PLANNED TRADE FORM -->
+    <div class="col-lg-5">
+        <div class="card shadow border-0 rounded-4">
+            <div class="card-header bg-transparent border-bottom-0 pt-3 pb-1 px-4">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-plus-circle text-primary me-2"></i>New Planned Trade</h5>
+            </div>
+            <div class="card-body px-4 pb-4">
+                <form method="post" action="{% url 'journal:planned_trade_add' %}" enctype="multipart/form-data" id="plannedTradeForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="strategy_template" id="ptTemplateId" value="">
+
+                    <!-- STRATEGY QUICK-PICK -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Quick Pick Strategy</label>
+                        <div style="max-height: 200px; overflow-y: auto;" class="border rounded-3 p-2">
+                            {% for category, strats in strategy_groups.items %}
+                            <div class="mb-2">
+                                <div class="text-muted small fw-bold text-uppercase mb-1">{{ category }}</div>
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% for s in strats %}
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary pt-strat-btn"
+                                            data-id="{{ s.id }}"
+                                            data-name="{{ s.name }}"
+                                            data-category="{{ s.category }}"
+                                            title="{{ s.leg_ratios }}">
+                                        {{ s.name }}
+                                    </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div id="ptSelectedStrat" class="d-none alert alert-info py-1 mt-2 small">
+                            <strong>Selected:</strong> <span id="ptStratName"></span>
+                            <button type="button" class="btn-close btn-close float-end" id="ptClearStrat" style="font-size: 0.6em;"></button>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">Trade Type</label>
+                            <select name="trade_type" id="ptTradeType" class="form-select form-select-sm">
+                                {% for val, label in trade_types %}
+                                <option value="{{ val }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">Direction</label>
+                            <input type="hidden" name="direction" id="ptDirectionInput" value="">
+                            <div class="btn-group w-100" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-success pt-direction-btn" data-value="Long">Long</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger pt-direction-btn" data-value="Short">Short</button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">Product</label>
+                            <select name="product" class="form-select form-select-sm">
+                                <option value="">Select...</option>
+                                {% for group, symbols in product_groups.items %}
+                                <optgroup label="{{ group }}">
+                                    {% for symbol in symbols %}
+                                    <option value="{{ symbol }}">{{ symbol }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">Contract Month</label>
+                            <select name="contract_month" class="form-select form-select-sm">
+                                <option value="">—</option>
+                                {% for m in contract_months %}
+                                <option value="{{ m }}">{{ m }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Strategy Label</label>
+                        <input type="text" name="strategy_label" id="ptStratLabel" class="form-control form-control-sm" placeholder='e.g. "CL 1M Spread Mar"'>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">Frequency</label>
+                            <select name="frequency" class="form-select form-select-sm" id="frequencySelect">
+                                <option value="Once">Once</option>
+                                <option value="Monthly">Monthly</option>
+                                <option value="Yearly">Yearly</option>
+                                <option value="SpecificMonths">Specific Months</option>
+                            </select>
+                        </div>
+                        <div class="col-6" id="specificMonthsGroup" style="display:none;">
+                            <label class="form-label text-muted small fw-bold">Months</label>
+                            <select name="specific_months" class="form-select form-select-sm" multiple size="4">
+                                <option value="Jan">Jan</option><option value="Feb">Feb</option>
+                                <option value="Mar">Mar</option><option value="Apr">Apr</option>
+                                <option value="May">May</option><option value="Jun">Jun</option>
+                                <option value="Jul">Jul</option><option value="Aug">Aug</option>
+                                <option value="Sep">Sep</option><option value="Oct">Oct</option>
+                                <option value="Nov">Nov</option><option value="Dec">Dec</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Reasoning / Notes</label>
+                        <textarea name="reasoning" class="form-control form-control-sm" rows="3" placeholder="Why this trade?"></textarea>
+                    </div>
+
+                    <!-- IMAGE: File input + Clipboard paste zone -->
+                    <div class="mb-4">
+                        <label class="form-label text-muted small fw-bold">Attach Image (Chart / Analysis)</label>
+                        <input type="file" name="image" id="imageFileInput" class="form-control form-control-sm mb-2" accept="image/*">
+                        <div id="pasteZone" class="border border-2 border-dashed rounded-3 p-3 text-center text-muted" style="cursor: pointer; min-height: 80px;">
+                            <i class="fa-regular fa-clipboard fs-4 d-block mb-1"></i>
+                            <span class="small">Or paste an image from clipboard (Ctrl+V)</span>
+                            <div id="pastePreview" class="mt-2 d-none">
+                                <img id="pastePreviewImg" class="img-fluid rounded" style="max-height: 150px;">
+                                <button type="button" class="btn btn-sm btn-outline-danger mt-1" id="clearPaste"><i class="fa-solid fa-times me-1"></i>Clear</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary fw-bold py-2"><i class="fa-solid fa-save me-2"></i>Save Plan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: PLANNED TRADES LIST -->
+    <div class="col-lg-7">
+        <div class="card shadow border-0 rounded-4">
+            <div class="card-body px-4">
+                {% for pt in planned_trades %}
+                <div class="border rounded-3 p-3 mb-3 {% if pt.status == 'Executed' %}bg-success bg-opacity-10{% elif pt.status == 'Cancelled' %}bg-danger bg-opacity-10{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="badge bg-secondary me-1">{{ pt.trade_type }}</span>
+                            {% if pt.direction %}<span class="badge {% if pt.direction == 'Long' %}bg-success{% else %}bg-danger{% endif %}">{{ pt.direction }}</span>{% endif %}
+                            <strong class="ms-1">{{ pt.product }} {{ pt.contract_month }}</strong>
+                        </div>
+                        <div>
+                            <span class="badge {% if pt.status == 'Planned' %}bg-warning text-dark{% elif pt.status == 'Executed' %}bg-success{% else %}bg-danger{% endif %}">{{ pt.status }}</span>
+                            <span class="badge bg-info text-dark ms-1">{{ pt.frequency }}</span>
+                        </div>
+                    </div>
+                    {% if pt.strategy_label %}<div class="text-muted small mb-1"><i class="fa-solid fa-tag me-1"></i>{{ pt.strategy_label }}</div>{% endif %}
+                    {% if pt.strategy_template %}<div class="text-muted small mb-1"><i class="fa-solid fa-puzzle-piece me-1"></i>Template: {{ pt.strategy_template.name }}</div>{% endif %}
+                    {% if pt.reasoning %}<p class="mb-2 small">{{ pt.reasoning }}</p>{% endif %}
+                    {% if pt.specific_months %}<div class="mb-2"><span class="text-muted small">Months:</span> {% for m in pt.specific_months %}<span class="badge bg-light text-dark border me-1">{{ m }}</span>{% endfor %}</div>{% endif %}
+                    {% if pt.image %}
+                    <div class="mb-2">
+                        <a href="{{ pt.image.url }}" target="_blank"><img src="{{ pt.image.url }}" class="img-fluid rounded shadow-sm" style="max-height: 200px;"></a>
+                    </div>
+                    {% endif %}
+                    <div class="d-flex justify-content-end">
+                        <form method="post" action="{% url 'journal:planned_trade_delete' pt.id %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash me-1"></i>Delete</button></form>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-5">
+                    <i class="fa-regular fa-lightbulb fs-2 d-block mb-2"></i>
+                    No planned trades yet.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Direction toggle
+    const ptDirInput = document.getElementById('ptDirectionInput');
+    document.querySelectorAll('.pt-direction-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            ptDirInput.value = btn.dataset.value;
+            document.querySelectorAll('.pt-direction-btn').forEach(b => {
+                b.classList.remove('active', 'btn-success', 'btn-danger');
+                b.classList.add(b.dataset.value === 'Long' ? 'btn-outline-success' : 'btn-outline-danger');
+            });
+            btn.classList.replace(btn.dataset.value === 'Long' ? 'btn-outline-success' : 'btn-outline-danger',
+                                  btn.dataset.value === 'Long' ? 'btn-success' : 'btn-danger');
+            btn.classList.add('active');
+        });
+    });
+
+    // Frequency toggle
+
+
+    // Strategy quick-pick for planned trades
+    const catMap = {'Spread': 'CalendarSpread', 'Butterfly': 'Butterfly', 'DoubleFly': 'DoubleFly', 'Custom': 'Outright'};
+    const ptTemplateId = document.getElementById('ptTemplateId');
+    const ptStratLabel = document.getElementById('ptStratLabel');
+    const ptTradeType = document.getElementById('ptTradeType');
+    const ptProductSelect = document.querySelector('[name="product"]');
+    const ptMonthSelect = document.querySelector('[name="contract_month"]');
+
+    function updatePTLabel() {
+        const id = ptTemplateId.value;
+        const strat = Array.from(document.querySelectorAll('.pt-strat-btn')).find(b => b.dataset.id === id);
+        if (!strat) return;
+        
+        const prod = ptProductSelect.value || "{Product}";
+        const month = ptMonthSelect.value || "{Month}";
+        ptStratLabel.value = `${prod} ${month} ${strat.dataset.name}`;
+    }
+
+    document.querySelectorAll('.pt-strat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            ptTemplateId.value = btn.dataset.id;
+            ptTradeType.value = catMap[btn.dataset.category] || 'Outright';
+            document.getElementById('ptSelectedStrat').classList.remove('d-none');
+            document.getElementById('ptStratName').textContent = btn.dataset.name;
+            updatePTLabel();
+            
+            document.querySelectorAll('.pt-strat-btn').forEach(b => b.classList.remove('btn-primary', 'active'));
+            btn.classList.add('btn-primary', 'active');
+            btn.classList.remove('btn-outline-secondary');
+        });
+    });
+
+    ptProductSelect.addEventListener('change', updatePTLabel);
+    ptMonthSelect.addEventListener('change', updatePTLabel);
+
+    document.getElementById('ptClearStrat').addEventListener('click', () => {
+        ptTemplateId.value = '';
+        document.getElementById('ptSelectedStrat').classList.add('d-none');
+        document.querySelectorAll('.pt-strat-btn').forEach(b => {
+            b.classList.remove('btn-primary', 'active');
+            b.classList.add('btn-outline-secondary');
+        });
+    });
+
+    // CLIPBOARD PASTE SUPPORT
+    const pasteZone = document.getElementById('pasteZone');
+    const imageInput = document.getElementById('imageFileInput');
+    const preview = document.getElementById('pastePreview');
+    const previewImg = document.getElementById('pastePreviewImg');
+
+    // Listen for paste on the whole document (works with Ctrl+V anywhere on the page)
+    document.addEventListener('paste', (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        for (const item of items) {
+            if (item.type.startsWith('image/')) {
+                e.preventDefault();
+                const blob = item.getAsFile();
+                if (!blob) continue;
+
+                // Show preview
+                const url = URL.createObjectURL(blob);
+                previewImg.src = url;
+                preview.classList.remove('d-none');
+
+                // Create a new File from the blob and set it on the file input
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(new File([blob], 'pasted-image.png', { type: blob.type }));
+                imageInput.files = dataTransfer.files;
+                break;
+            }
+        }
+    });
+
+    // Also allow clicking the paste zone to trigger file input
+    pasteZone.addEventListener('click', (e) => {
+        if (e.target.closest('#clearPaste') || e.target.closest('#pastePreviewImg')) return;
+        imageInput.click();
+    });
+
+    // Clear pasted image
+    document.getElementById('clearPaste').addEventListener('click', () => {
+        preview.classList.add('d-none');
+        previewImg.src = '';
+        imageInput.value = '';
+    });
+
+    // Show preview when file is selected via file input
+    imageInput.addEventListener('change', () => {
+        if (imageInput.files.length > 0) {
+            const url = URL.createObjectURL(imageInput.files[0]);
+            previewImg.src = url;
+            preview.classList.remove('d-none');
+        }
+    });
+});
+</script>
+{% endblock %}

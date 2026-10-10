@@ -1,0 +1,125 @@
+<!-- Edit Trade Modal -->
+<div class="modal fade" id="editModal{{ trade.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-pen-to-square me-2"></i>Edit Trade</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4">
+                <form id="editForm{{ trade.id }}" method="post" action="{% url 'journal:trade_edit' trade.id %}">
+                    {% csrf_token %}
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold">Trade Type</label>
+                            <select name="trade_type" class="form-select form-select-sm">
+                                <option value="Outright" {% if trade.trade_type == 'Outright' %}selected{% endif %}>Outright</option>
+                                <option value="CalendarSpread" {% if trade.trade_type == 'CalendarSpread' %}selected{% endif %}>Calendar Spread</option>
+                                <option value="Butterfly" {% if trade.trade_type == 'Butterfly' %}selected{% endif %}>Butterfly</option>
+                                <option value="DoubleFly" {% if trade.trade_type == 'DoubleFly' %}selected{% endif %}>Double Fly</option>
+                                <option value="InterProductSpread" {% if trade.trade_type == 'InterProductSpread' %}selected{% endif %}>Inter-Product Spread</option>
+                                <option value="SpreadVsSpread" {% if trade.trade_type == 'SpreadVsSpread' %}selected{% endif %}>Spread vs Spread</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold">Direction</label>
+                            <select name="direction" class="form-select form-select-sm">
+                                <option value="Long" {% if trade.direction == 'Long' %}selected{% endif %}>Long</option>
+                                <option value="Short" {% if trade.direction == 'Short' %}selected{% endif %}>Short</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold">Strategy Label</label>
+                            <input type="text" name="strategy_label" class="form-control form-control-sm" value="{{ trade.strategy_label }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Notes</label>
+                        <textarea name="notes" class="form-control form-control-sm" rows="2">{{ trade.notes }}</textarea>
+                    </div>
+                </form>
+
+                <!-- Position History -->
+                <div class="mb-2">
+                        <label class="form-label text-muted small fw-bold">Position History</label>
+                        <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="table-light">
+                                    <tr><th>Time</th><th>Action</th><th>Size Δ</th><th>Price</th><th>PnL</th><th class="text-end">Actions</th></tr>
+                                </thead>
+                                <tbody>
+                                    {% for adj in trade.adjustments.all %}
+                                    <tr id="adj-row-{{ adj.id }}">
+                                        <td class="text-muted small">{{ adj.timestamp|date:"M d H:i" }}</td>
+                                        <td><span class="badge {% if adj.action == 'Open' or adj.action == 'Add' %}bg-success{% else %}bg-danger{% endif %}">{{ adj.action }}</span></td>
+                                        <td>{{ adj.size_change }}</td>
+                                        <td>{{ adj.price|default:"—"|floatformat:4 }}</td>
+                                        <td class="{% if adj.pnl > 0 %}text-success{% elif adj.pnl < 0 %}text-danger{% endif %}">{{ adj.pnl|floatformat:2 }}</td>
+                                        <td class="text-end">
+                                            <button type="button" class="btn btn-link btn-sm p-0 me-2 text-primary" onclick="toggleAdjEdit('{{ adj.id }}')"><i class="fa-solid fa-pen-to-square"></i></button>
+                                            <button type="button" class="btn btn-link btn-sm p-0 text-danger" onclick="submitDeleteAdj('{{ adj.id }}')"><i class="fa-solid fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr id="adj-edit-{{ adj.id }}" style="display:none;" class="bg-light">
+                                        <td colspan="6">
+                                            <form method="post" action="{% url 'journal:adjustment_edit' adj.id %}">
+                                                {% csrf_token %}
+                                                <div class="row g-2 align-items-center">
+                                                    <div class="col-3">
+                                                        <label class="xsmall text-muted">Size Δ</label>
+                                                        <input type="number" step="any" name="size_change" value="{{ adj.size_change }}" class="form-control form-control-sm">
+                                                    </div>
+                                                    <div class="col-3">
+                                                        <label class="xsmall text-muted">Price</label>
+                                                        <input type="number" step="any" name="price" value="{{ adj.price }}" class="form-control form-control-sm">
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <label class="xsmall text-muted">Notes</label>
+                                                        <input type="text" name="notes" value="{{ adj.notes }}" class="form-control form-control-sm">
+                                                    </div>
+                                                    <div class="col-2 text-end pt-3">
+                                                        <button type="submit" class="btn btn-xs btn-success"><i class="fa-solid fa-check"></i></button>
+                                                        <button type="button" class="btn btn-xs btn-secondary" onclick="toggleAdjEdit('{{ adj.id }}')"><i class="fa-solid fa-times"></i></button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="5" class="text-center text-muted">No adjustments</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light d-flex justify-content-between">
+                    <a href="{% url 'journal:trade_delete' trade.id %}" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash me-1"></i>Delete Trade</a>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" form="editForm{{ trade.id }}" class="btn btn-sm btn-primary">Save Changes</button>
+                    </div>
+                </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAdjEdit(adjId) {
+    const row = document.getElementById('adj-row-' + adjId);
+    const editRow = document.getElementById('adj-edit-' + adjId);
+    if (editRow.style.display === 'none') {
+        editRow.style.display = 'table-row';
+        row.classList.add('opacity-50');
+    } else {
+        editRow.style.display = 'none';
+        row.classList.remove('opacity-50');
+    }
+}
+</script>
+
+<style>
+.btn-xs { padding: 0.1rem 0.3rem; font-size: 0.75rem; }
+.xsmall { font-size: 0.65rem; display: block; }
+</style>
