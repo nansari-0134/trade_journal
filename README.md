@@ -4,6 +4,8 @@ An **institutional-grade Commodity & Futures Trading Journal, Multi-Leg Strategy
 
 Designed specifically for professional commodity traders, quant analysts, and futures prop traders who trade outrights, calendar spreads, flies, and inter-product spreads across global derivatives exchanges (CME, CBOT, NYMEX, ICE, Euronext, and BMD).
 
+![Trade Journal Dashboard](docs/assets/images/dashboard.png)
+
 ---
 
 ## 🌟 Key Highlights
@@ -135,9 +137,32 @@ Define common strategy structures in `/strategies/` or seed via `StrategyTemplat
 
 ---
 
+## 📚 Documentation (MkDocs)
+
+The project includes an in-depth, production-ready documentation site built with [MkDocs](https://www.mkdocs.org/) and the [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) theme.
+
+### Running Documentation Locally
+
+```bash
+# Serve documentation locally with live reloading
+mkdocs serve
+```
+
+Navigate to [http://127.0.0.1:8000/](http://127.0.0.1:8000/) (or the port specified by the CLI) to read the full guides:
+- **[Executive Dashboard](docs/features/dashboard.md)**
+- **[Multi-Leg Trade Execution](docs/features/trade-management.md)**
+- **[Position Adjustments & Audit Trail](docs/features/position-adjustments.md)**
+- **[CFTC Commitments of Traders](docs/features/cot-reports.md)**
+- **[Palm Oil (FCPO) Fundamentals](docs/features/palm-oil.md)**
+- **[How to Add More Products](docs/guides/adding-products.md)**
+- **[How to Add Strategies & Pairs](docs/guides/adding-strategies.md)**
+- **[Multiplier & PnL Formulas](docs/reference/formulas.md)**
+
+---
+
 ## 🗺️ Roadmap
 
-- [ ] Comprehensive documentation with MkDocs & Material theme
+- [x] Comprehensive documentation with MkDocs & Material theme
 - [ ] Integration with live WebSocket/REST market data feeds
 - [ ] Exportable tax and performance reports (PDF/Excel)
 - [ ] Advanced curve seasonality overlays
