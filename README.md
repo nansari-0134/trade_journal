@@ -1,10 +1,5 @@
 # Trade Journal 📈
 
-[![Django](https://img.shields.io/badge/Django-5.2-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
-
 An **institutional-grade Commodity & Futures Trading Journal, Multi-Leg Strategy Manager, and Fundamental Market Intelligence Platform**.
 
 Designed specifically for professional commodity traders, quant analysts, and futures prop traders who trade outrights, calendar spreads, flies, and inter-product spreads across global derivatives exchanges (CME, CBOT, NYMEX, ICE, Euronext, and BMD).
@@ -50,12 +45,14 @@ trade_journal/
 ## 📊 Core Modules
 
 ### 1. Multi-Leg Trade Life Cycle & Accounting
+
 - **Weighted Average Entry**: Accurately handles progressive scale-ins (`Add` actions) across varying price levels.
 - **Cash PnL Calculation**: Scales price ticks by each product's contractual multiplier:
   $$\text{Multiplier} = \left(\frac{\text{PointValue}}{\text{DisplayFactor}}\right) \times \text{FXRate}$$
 - **Transaction Costs**: Calculates gross and net realized PnL, factoring in pre-rebate exchange fees and post-rebate execution costs.
 
 ### 2. CFTC Commitments of Traders (COT)
+
 - Ingests weekly legacy futures reports.
 - Categorizes positions across:
   - **Commercial (Hedgers)**: Producer/Merchant/Processor/User & Swap Dealers
@@ -64,6 +61,7 @@ trade_journal/
 - Tracks historical changes in Net Positions and Total Open Interest.
 
 ### 3. Crude Palm Oil (FCPO) Fundamental Intelligence
+
 - Forward price curves and open interest by contract month.
 - Monthly MPOB balance sheets (Production, Imports, Exports, Local Disappearance, Ending Stocks).
 - 10-day, 15-day, 20-day, and full-month surveyor export numbers.
@@ -73,6 +71,7 @@ trade_journal/
 ## 🚀 Quick Start Guide
 
 ### 1. Prerequisites
+
 - Python 3.10 or higher
 - Git
 
@@ -119,7 +118,9 @@ Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/) in your web browser.
 ## ⚙️ Configuration & Reference Data
 
 ### Adding Products
+
 All product contract sizes, currencies, exchanges, and fee schedules are maintained in [`Products.xlsx`](Products.xlsx). The columns include:
+
 - `Product`: Contract symbol (e.g., `CL`, `FCPO`, `ZS`, `ES`)
 - `ProductGroup`: Commodity sector (Energy, Agriculture, Equity Indices, etc.)
 - `Exchange`: NYMEX, CBOT, CME, ICE, Euronext, BMD
@@ -129,11 +130,13 @@ All product contract sizes, currencies, exchanges, and fee schedules are maintai
 - `TC_PreRebate` & `TC_PostRebate`: Transaction costs per contract
 
 ### Strategy Templates
+
 Define common strategy structures in `/strategies/` or seed via `StrategyTemplate` models (e.g., calendar spreads, 3-leg flies, double-flies).
 
 ---
 
 ## 🗺️ Roadmap
+
 - [ ] Comprehensive documentation with MkDocs & Material theme
 - [ ] Integration with live WebSocket/REST market data feeds
 - [ ] Exportable tax and performance reports (PDF/Excel)
@@ -142,4 +145,5 @@ Define common strategy structures in `/strategies/` or seed via `StrategyTemplat
 ---
 
 ## 📄 License
+
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
