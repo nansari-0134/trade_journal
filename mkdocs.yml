@@ -80,5 +80,6 @@ nav:
       - How to Add Strategies & Pairs: guides/adding-strategies.md
       - Fee Modeling & Multipliers: guides/fee-modeling.md
   - Technical Reference:
+      - Trading Bot REST API: reference/api.md
       - Relational Models & Schemas: reference/architecture.md
       - Multiplier & PnL Formulas: reference/formulas.md

@@ -1,9 +1,14 @@
 from django.urls import path
 from . import views
+from . import api_views
 
 app_name = 'journal'
 
 urlpatterns = [
+    # REST API for Trading Bots
+    path('api/trades/', api_views.api_trades, name='api_trades'),
+    path('api/trades/<uuid:trade_id>/', api_views.api_trade_detail, name='api_trade_detail'),
+    path('api/trades/<uuid:trade_id>/adjust/', api_views.api_trade_adjust, name='api_trade_adjust'),
     # Dashboard
     path('', views.dashboard, name='dashboard'),
 
