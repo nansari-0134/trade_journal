@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from collections import defaultdict
-from .models import Trade, PlannedTrade, StrategyTemplate, InterProductPair, PositionAdjustment, CotReport, PalmOilPriceAndOI, MPOBData, ExportSurveyorData
+from .models import Account, Trade, PlannedTrade, StrategyTemplate, InterProductPair, PositionAdjustment, CotReport, PalmOilPriceAndOI, MPOBData, ExportSurveyorData
 from . import services
 from . import utils as product_utils
 import json
@@ -11,14 +11,97 @@ import calendar
 from datetime import datetime, date, timedelta
 
 
+def get_active_account(request):
+    """Resolve active account from session or default without requiring authentication."""
+    active_account_id = request.session.get('active_account_id')
+    if active_account_id == 'all':
+        return None
+    if active_account_id:
+        acc = Account.objects.filter(id=active_account_id).first()
+        if acc:
+            return acc
+    acc = Account.objects.first()
+    if acc:
+        request.session['active_account_id'] = str(acc.id)
+    return acc
+
+
+def account_switch(request, account_id):
+    """Switch active account instantly with zero authentication."""
+    if account_id == 'all':
+        request.session['active_account_id'] = 'all'
+    else:
+        acc = get_object_or_404(Account, id=account_id)
+        request.session['active_account_id'] = str(acc.id)
+    referer = request.META.get('HTTP_REFERER')
+    return redirect(referer if referer else 'journal:dashboard')
+
+
+@require_POST
+def account_add(request):
+    """Add a new account directly from modal without navigating away."""
+    name = request.POST.get('name', '').strip()
+    description = request.POST.get('description', '').strip()
+    currency = request.POST.get('currency', 'USD').strip()
+    raw_bal = request.POST.get('initial_balance', '50000')
+    try:
+        initial_balance = float(raw_bal)
+    except (ValueError, TypeError):
+        initial_balance = 50000.0
+
+    if name:
+        acc, created = Account.objects.get_or_create(
+            name=name,
+            defaults={
+                'description': description,
+                'initial_balance': initial_balance,
+                'currency': currency or 'USD'
+            }
+        )
+        request.session['active_account_id'] = str(acc.id)
+        messages.success(request, f"Account '{name}' created and activated.")
+    else:
+        messages.error(request, "Account name cannot be empty.")
+
+    referer = request.META.get('HTTP_REFERER')
+    return redirect(referer if referer else 'journal:dashboard')
+
+
+@require_POST
+def account_delete(request, account_id):
+    """Remove an account directly without extra pages."""
+    acc = get_object_or_404(Account, id=account_id)
+    name = acc.name
+    acc.delete()
+    messages.success(request, f"Account '{name}' deleted.")
+
+    rem = Account.objects.first()
+    if rem:
+        request.session['active_account_id'] = str(rem.id)
+    else:
+        request.session['active_account_id'] = 'all'
+
+    referer = request.META.get('HTTP_REFERER')
+    return redirect(referer if referer else 'journal:dashboard')
+
+
 # ---------------------------------------------------------------------------
 # Dashboard
 # ---------------------------------------------------------------------------
 
 def dashboard(request):
-    open_trades = Trade.objects.filter(status__in=['Open', 'PartiallyReduced']).prefetch_related('legs', 'adjustments')
-    closed_trades = Trade.objects.filter(status='Closed').prefetch_related('legs', 'adjustments')
+    active_acc = get_active_account(request)
+    open_trades = Trade.objects.filter(status__in=['Open', 'PartiallyReduced'])
+    closed_trades = Trade.objects.filter(status='Closed')
     planned_trades = services.get_active_planned_trades()
+
+    if active_acc:
+        open_trades = open_trades.filter(account=active_acc)
+        closed_trades = closed_trades.filter(account=active_acc)
+        planned_trades = [p for p in planned_trades if p.account == active_acc or p.account is None]
+
+    open_trades = open_trades.prefetch_related('legs', 'adjustments', 'account')
+    closed_trades = closed_trades.prefetch_related('legs', 'adjustments', 'account')
 
     open_summaries = []
     total_fees = 0.0
@@ -80,6 +163,8 @@ def dashboard(request):
 
     # Chart Data: Cumulative Net PnL based on PositionAdjustments
     adjs = PositionAdjustment.objects.all().order_by('timestamp').select_related('trade').prefetch_related('trade__legs')
+    if active_acc:
+        adjs = adjs.filter(trade__account=active_acc)
     daily_net_pnl = defaultdict(float)
     products_data = product_utils.get_products_data()
     
@@ -173,6 +258,8 @@ def trade_new(request):
             for p in pairs
         ]),
         'contract_months_json': json.dumps(product_utils.get_contract_months()),
+        'accounts': Account.objects.all(),
+        'selected_account': get_active_account(request),
     }
     return render(request, 'journal/trade_new.html', context)
 
@@ -223,6 +310,13 @@ def trade_add(request):
 
     legs = _parse_legs(request.POST)
 
+    account_id = request.POST.get('account')
+    account = None
+    if account_id and account_id != 'none':
+        account = Account.objects.filter(id=account_id).first()
+    if not account:
+        account = get_active_account(request)
+
     try:
         trade = services.open_trade(
             trade_type=trade_type,
@@ -232,6 +326,7 @@ def trade_add(request):
             price=price,
             strategy_label=strategy_label,
             notes=notes,
+            account=account,
         )
         trade.market_price = market_price
         trade.stoploss = stoploss
@@ -462,7 +557,10 @@ def pair_delete(request, pair_id):
 # ---------------------------------------------------------------------------
 
 def planned_trades_page(request):
+    active_acc = get_active_account(request)
     planned = PlannedTrade.objects.all()
+    if active_acc:
+        planned = planned.filter(account=active_acc)
     strategies = StrategyTemplate.objects.all()
     strategy_groups = {}
     for s in strategies:
@@ -605,7 +703,11 @@ def _parse_legs(post_data) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 def trades_list(request):
-    all_trades = Trade.objects.all().prefetch_related('legs', 'adjustments').order_by('-created_at')
+    active_acc = get_active_account(request)
+    all_trades = Trade.objects.all()
+    if active_acc:
+        all_trades = all_trades.filter(account=active_acc)
+    all_trades = all_trades.prefetch_related('legs', 'adjustments', 'account').order_by('-created_at')
     
     strategy_pnl = defaultdict(float)
     product_pnl = defaultdict(float)
@@ -737,6 +839,9 @@ def calendar_view(request):
         timestamp__gte=start_date,
         timestamp__lt=next_month_date
     ).select_related('trade').prefetch_related('trade__legs')
+    active_acc = get_active_account(request)
+    if active_acc:
+        adjustments = adjustments.filter(trade__account=active_acc)
     
     products_data = product_utils.get_products_data()
     

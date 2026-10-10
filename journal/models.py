@@ -3,6 +3,26 @@ import uuid
 import datetime
 
 
+class Account(models.Model):
+    """
+    User trading account (e.g. Apex 50k, Prop Desk, Personal Futures).
+    Allows multi-account trade segmentation and instant switching without authentication.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True, help_text='e.g. Apex 50k, Topstep 150k, Personal')
+    description = models.CharField(max_length=255, blank=True, default='')
+    currency = models.CharField(max_length=10, default='USD')
+    initial_balance = models.FloatField(default=50000.0, help_text='Starting account capital')
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-is_default', 'name']
+
+    def __str__(self):
+        return self.name
+
+
 class InterProductPair(models.Model):
     """
     Stores predefined inter-product pairs (e.g., CL-BZ).
@@ -100,6 +120,10 @@ class Trade(models.Model):
     strategy_template = models.ForeignKey(
         StrategyTemplate, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='trades'
+    )
+    account = models.ForeignKey(
+        Account, null=True, blank=True,
+        on_delete=models.CASCADE, related_name='trades'
     )
     notes = models.TextField(blank=True, default='')
     
@@ -253,6 +277,10 @@ class PlannedTrade(models.Model):
     strategy_template = models.ForeignKey(
         StrategyTemplate, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='planned_trades'
+    )
+    account = models.ForeignKey(
+        Account, null=True, blank=True,
+        on_delete=models.CASCADE, related_name='planned_trades'
     )
 
     frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='Once')

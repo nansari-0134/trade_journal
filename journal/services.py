@@ -22,22 +22,10 @@ def open_trade(
     price: float | None = None,
     strategy_label: str = '',
     notes: str = '',
+    account=None,
 ) -> Trade:
     """
     Create a new trade with its legs and an initial 'Open' position adjustment.
-
-    Args:
-        trade_type: One of Trade.TRADE_TYPE_CHOICES values.
-        direction: 'Long' or 'Short'.
-        legs: List of dicts, each with keys:
-              product, product_group, contract_month, direction, ratio
-        size: Initial position size (positive).
-        price: Entry price (optional).
-        strategy_label: User-defined label.
-        notes: Free-text notes.
-
-    Returns:
-        The created Trade instance.
     """
     trade = Trade.objects.create(
         trade_type=trade_type,
@@ -45,6 +33,7 @@ def open_trade(
         status='Open',
         strategy_label=strategy_label,
         notes=notes,
+        account=account,
     )
 
     # Auto-generate strategy_label if not provided and legs exist

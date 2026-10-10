@@ -286,6 +286,57 @@
                 <h1>{% block header_title %}Dashboard{% endblock %}</h1>
             </div>
             <div class="header-actions">
+                <!-- Account Switcher Dropdown -->
+                <div class="dropdown me-1">
+                    <button class="btn btn-dark border-secondary d-flex align-items-center gap-2 px-3 py-2 rounded-pill shadow-sm" type="button" id="accountSwitcherDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.15) !important;">
+                        <i class="fa-solid fa-briefcase text-cyan"></i>
+                        <span class="fw-semibold text-white">
+                            {% if is_all_accounts %}
+                                All Accounts
+                            {% elif active_account %}
+                                {{ active_account.name }}
+                            {% else %}
+                                Select Account
+                            {% endif %}
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-muted ms-1" style="font-size: 0.75rem;"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-2" aria-labelledby="accountSwitcherDropdown" style="min-width: 280px; background: #161616; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 14px;">
+                        <li class="px-3 py-1 mb-1 text-uppercase text-muted" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;">Trading Accounts</li>
+                        
+                        {% for acc in all_accounts %}
+                        <li>
+                            <div class="d-flex align-items-center justify-content-between rounded px-2 py-1 mb-1 {% if active_account and active_account.id == acc.id and not is_all_accounts %}bg-primary bg-opacity-10 text-cyan{% endif %}" style="transition: background 0.2s;">
+                                <a class="dropdown-item d-flex align-items-center gap-2 p-0 bg-transparent text-white flex-grow-1" href="{% url 'journal:account_switch' acc.id %}">
+                                    <i class="fa-solid fa-circle-dot {% if active_account and active_account.id == acc.id and not is_all_accounts %}text-cyan{% else %}text-muted{% endif %}" style="font-size: 0.7rem;"></i>
+                                    <span class="text-truncate" style="max-width: 170px;">{{ acc.name }}</span>
+                                    {% if acc.is_default %}<span class="badge bg-secondary ms-1" style="font-size: 0.6rem;">Default</span>{% endif %}
+                                </a>
+                                {% if all_accounts|length > 1 %}
+                                <button type="button" class="btn btn-link text-danger p-0 ms-2" title="Delete Account" onclick="openDeleteAccountModal('{{ acc.id }}', '{{ acc.name|escapejs }}'); event.stopPropagation();" style="opacity: 0.7;">
+                                    <i class="fa-solid fa-trash-can" style="font-size: 0.8rem;"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% endfor %}
+
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 rounded px-2 py-1 text-white {% if is_all_accounts %}bg-primary bg-opacity-10 text-cyan{% endif %}" href="{% url 'journal:account_switch' 'all' %}">
+                                <i class="fa-solid fa-layer-group {% if is_all_accounts %}text-cyan{% else %}text-muted{% endif %}" style="font-size: 0.75rem;"></i>
+                                <span>All Accounts (Combined)</span>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-2" style="border-color: rgba(255,255,255,0.1);"></li>
+                        <li>
+                            <button class="dropdown-item d-flex align-items-center gap-2 rounded px-2 py-1 text-cyan fw-semibold" type="button" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+                                <i class="fa-solid fa-circle-plus"></i>
+                                <span>Add New Account</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
                 <div class="badge-premium"><i class="fa-solid fa-calendar me-2"></i>{% now "M d, Y" %}</div>
                 <button class="btn btn-outline-secondary rounded-circle" type="button" id="privacyToggle" title="Toggle Privacy Mode">
                     <i class="fa-solid fa-eye" id="privacyIcon"></i>
@@ -377,6 +428,83 @@
                 }
             }
         });
+    </script>
+    <!-- Add Account Modal -->
+    <div class="modal fade" id="addAccountModal" tabindex="-1" aria-labelledby="addAccountModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg text-white" style="background: #181818; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1) !important;">
+                <form method="post" action="{% url 'journal:account_add' %}">
+                    {% csrf_token %}
+                    <div class="modal-header border-bottom border-dark px-4 pt-4">
+                        <h5 class="modal-title fw-bold" id="addAccountModalLabel">
+                            <i class="fa-solid fa-briefcase text-cyan me-2"></i>Add Trading Account
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body px-4 py-3">
+                        <div class="mb-3">
+                            <label class="form-label small text-muted text-uppercase fw-bold">Account Name</label>
+                            <input type="text" name="name" class="form-control bg-dark text-white border-secondary" placeholder="e.g. Apex 50k #1, Topstep 150k, Personal Futures" required autofocus>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted text-uppercase fw-bold">Description (Optional)</label>
+                            <input type="text" name="description" class="form-control bg-dark text-white border-secondary" placeholder="e.g. Funded Prop Desk Account">
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-8">
+                                <label class="form-label small text-muted text-uppercase fw-bold">Initial Balance</label>
+                                <input type="number" step="any" name="initial_balance" class="form-control bg-dark text-white border-secondary" value="50000">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small text-muted text-uppercase fw-bold">Currency</label>
+                                <select name="currency" class="form-select bg-dark text-white border-secondary">
+                                    <option value="USD" selected>USD</option>
+                                    <option value="MYR">MYR</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="GBP">GBP</option>
+                                    <option value="INR">INR</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top border-dark px-4 pb-4">
+                        <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold" style="background: var(--accent-cyan); color: #000; border: none;">Create Account</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Account Modal -->
+    <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg text-white" style="background: #181818; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1) !important;">
+                <form method="post" id="deleteAccountForm" action="">
+                    {% csrf_token %}
+                    <div class="modal-body text-center p-4">
+                        <div class="text-danger mb-3">
+                            <i class="fa-solid fa-triangle-exclamation" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">Delete Account?</h5>
+                        <p class="text-muted small mb-4">Are you sure you want to delete <strong id="deleteAccountName" class="text-white"></strong>? All associated trades will also be deleted.</p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger btn-sm px-3 fw-bold">Delete</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openDeleteAccountModal(accountId, accountName) {
+            document.getElementById('deleteAccountName').textContent = accountName;
+            document.getElementById('deleteAccountForm').action = '/accounts/' + accountId + '/delete/';
+            const modal = new bootstrap.Modal(document.getElementById('deleteAccountModal'));
+            modal.show();
+        }
     </script>
     {% block scripts %}{% endblock %}
 </body>

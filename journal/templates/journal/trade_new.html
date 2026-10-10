@@ -168,6 +168,17 @@
         <!-- ══ COLUMN 1: STRATEGY & INSTRUMENT ══ -->
         <div class="col-lg-4">
             <div class="glass-card">
+                <div class="mb-3 pb-3 border-bottom border-dark">
+                    <label class="compact-label"><i class="fa-solid fa-briefcase text-cyan me-1"></i> Account</label>
+                    <select name="account" id="accountSelect" class="compact-input fw-semibold" style="border-color: rgba(0, 242, 255, 0.3);">
+                        {% for acc in accounts %}
+                        <option value="{{ acc.id }}" {% if selected_account and selected_account.id == acc.id %}selected{% endif %}>
+                            {{ acc.name }} ({{ acc.currency }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <span class="compact-label"><i class="fa-solid fa-layer-group me-1"></i> Strategy</span>
                     <a href="{% url 'journal:strategies' %}" class="shortcut-btn"><i class="fa-solid fa-cog"></i></a>

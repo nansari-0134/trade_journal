@@ -125,6 +125,7 @@
                 <thead class="text-muted small border-bottom border-dark">
                     <tr>
                         <th class="ps-4">DATE</th>
+                        <th>ACCOUNT</th>
                         <th>SYMBOL</th>
                         <th>ENTRY PRICE</th>
                         <th>STATUS</th>
@@ -135,6 +136,15 @@
                     {% for t in trades %}
                     <tr class="trade-row" data-bs-toggle="modal" data-bs-target="#tradeDetailModal{{ t.trade.id }}">
                         <td class="ps-4 small text-muted">{{ t.trade.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            {% if t.trade.account %}
+                            <span class="badge rounded-pill bg-dark border border-secondary text-info" style="font-size: 0.7rem;">
+                                <i class="fa-solid fa-briefcase me-1"></i>{{ t.trade.account.name }}
+                            </span>
+                            {% else %}
+                            <span class="badge rounded-pill bg-dark border border-secondary text-muted" style="font-size: 0.7rem;">Main</span>
+                            {% endif %}
+                        </td>
                         <td>
                             <div class="d-flex align-items-center gap-3">
                                 <div>

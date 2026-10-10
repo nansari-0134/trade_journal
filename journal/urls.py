@@ -11,6 +11,11 @@ urlpatterns = [
     path('trades/', views.trades_list, name='trades'),
     path('products/fees/', views.products_fees_page, name='products_fees'),
 
+    # Accounts
+    path('accounts/switch/<str:account_id>/', views.account_switch, name='account_switch'),
+    path('accounts/add/', views.account_add, name='account_add'),
+    path('accounts/<uuid:account_id>/delete/', views.account_delete, name='account_delete'),
+
     # New Trade (dedicated page)
     path('trades/new/', views.trade_new, name='trade_new'),
     path('trades/add/', views.trade_add, name='trade_add'),
