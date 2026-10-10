@@ -1429,11 +1429,10 @@
 <li>Scroll to the <strong>Equity Indices</strong> section or search for <code>ES</code>.</li>
 <li>Confirm that the new contract appears with its tick value (<span class="arithmatex">\(12.50) and fee schedule (\)</span>1.15).</li>
 </ol>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>graph LR
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    Edit[Edit Products.xlsx] --&gt; Save[Save File]
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    Save --&gt; Auto[Django Auto-Loads via Pandas on Next Request]
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    Auto --&gt; Available[Immediately Available in New Trade Form &amp; Fees Page]
-</span></code></pre></div>
+<pre class="mermaid"><code>graph LR
+    Edit[Edit Products.xlsx] --&gt; Save[Save File]
+    Save --&gt; Auto[Django Auto-Loads via Pandas on Next Request]
+    Auto --&gt; Available[Immediately Available in New Trade Form &amp; Fees Page]</code></pre>
 <blockquote>
 <p><strong>Pro Tip</strong>: You do <strong>not</strong> need to restart the Django server or run migrations when editing <code>Products.xlsx</code>. The helper function <code>utils.get_products_data()</code> re-reads the Excel spreadsheet dynamically.</p>
 </blockquote>
