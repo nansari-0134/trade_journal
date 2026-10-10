@@ -117,7 +117,7 @@
             <i class="fa-solid fa-circle-info stat-info-btn"></i>
             <div class="icon-box text-purple"><i class="fa-solid fa-house-signal"></i></div>
             <div class="stat-label">Total Net Profit</div>
-            <div class="stat-value sensitive-value">${{ net_pnl|floatformat:2 }}</div>
+            <div class="stat-value sensitive-value">{% if net_pnl > 0 %}+${{ net_pnl|floatformat:2 }}{% elif net_pnl < 0 %}-${{ net_pnl|floatformat:2|slice:"1:" }}{% else %}$0.00{% endif %}</div>
         </div>
     </div>
     <div class="col-md">
@@ -238,7 +238,7 @@
                                     <td class="text-end">
                                         <div
                                             class="{% if s.gross_pnl >= 0 %}text-green{% else %}text-red{% endif %} fw-bold small">
-                                            {% if s.gross_pnl > 0 %}+${{ s.gross_pnl }}{% elif s.gross_pnl < 0 %}-${{ s.gross_pnl|stringformat:"+f"|slice:"1:" }}{% else %}$0.00{% endif %}</div>
+                                            {% if s.gross_pnl > 0 %}+${{ s.gross_pnl|floatformat:2 }}{% elif s.gross_pnl < 0 %}-${{ s.gross_pnl|floatformat:2|slice:"1:" }}{% else %}$0.00{% endif %}</div>
                                     </td>
                                     <td class="pe-4 text-end">
                                         <button class="btn btn-sm btn-outline-success rounded-circle me-1" data-bs-toggle="modal" data-bs-target="#adjustModal{{ s.trade.id }}" title="Adjust Position">
@@ -295,13 +295,13 @@
                                         <div class="small mb-1">
                                             <span class="text-muted" style="font-size: 0.65rem;">Unrealized:</span>
                                             <span class="{% if s.unrealized_pnl >= 0 %}text-green{% else %}text-red{% endif %} fw-bold ms-1">
-                                                {% if s.unrealized_pnl > 0 %}+${{ s.unrealized_pnl }}{% elif s.unrealized_pnl < 0 %}-${{ s.unrealized_pnl|stringformat:"+f"|slice:"1:" }}{% else %}$0.00{% endif %}
+                                                {% if s.unrealized_pnl > 0 %}+${{ s.unrealized_pnl|floatformat:2 }}{% elif s.unrealized_pnl < 0 %}-${{ s.unrealized_pnl|floatformat:2|slice:"1:" }}{% else %}$0.00{% endif %}
                                             </span>
                                         </div>
                                         <div class="small">
                                             <span class="text-muted" style="font-size: 0.65rem;">Realized:</span>
                                             <span class="{% if s.realized_pnl >= 0 %}text-green{% else %}text-red{% endif %} fw-bold ms-1">
-                                                {% if s.realized_pnl > 0 %}+${{ s.realized_pnl }}{% elif s.realized_pnl < 0 %}-${{ s.realized_pnl|stringformat:"+f"|slice:"1:" }}{% else %}$0.00{% endif %}
+                                                {% if s.realized_pnl > 0 %}+${{ s.realized_pnl|floatformat:2 }}{% elif s.realized_pnl < 0 %}-${{ s.realized_pnl|floatformat:2|slice:"1:" }}{% else %}$0.00{% endif %}
                                             </span>
                                         </div>
                                     </td>

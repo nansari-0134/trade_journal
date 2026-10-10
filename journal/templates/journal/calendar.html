@@ -160,9 +160,9 @@
                     
                     {% if d.stats.gross != 0 or d.stats.net != 0 %}
                     <div class="pnl-block">
-                        <div class="gross-pnl">G: {% if d.stats.gross > 0 %}+{% endif %}${{ d.stats.gross|floatformat:2 }}</div>
+                        <div class="gross-pnl">G: {% if d.stats.gross > 0 %}+${{ d.stats.gross|floatformat:2 }}{% elif d.stats.gross < 0 %}-${{ d.stats.gross|floatformat:2|slice:"1:" }}{% else %}$0.00{% endif %}</div>
                         <div class="net-pnl {% if d.stats.net >= 0 %}text-green{% else %}text-red{% endif %}">
-                            {% if d.stats.net > 0 %}+{% endif %}${{ d.stats.net|floatformat:2 }}
+                            {% if d.stats.net > 0 %}+${{ d.stats.net|floatformat:2 }}{% elif d.stats.net < 0 %}-${{ d.stats.net|floatformat:2|slice:"1:" }}{% else %}$0.00{% endif %}
                         </div>
                     </div>
                     {% endif %}

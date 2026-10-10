@@ -35,9 +35,9 @@
                             {% if s.is_default %}<span class="badge bg-light text-muted border ms-1" style="font-size:0.6em;">DEFAULT</span>{% endif %}
                         </td>
                         <td><span class="badge bg-secondary">{{ s.get_category_display }}</span></td>
-                        <td><span class="badge bg-outline-info text-info border-info">{{ s.get_strategy_type_display }}</span></td>
+                        <td><span class="badge border border-info text-info bg-dark">{{ s.get_strategy_type_display }}</span></td>
                         {% for i in max_legs %}
-                        <td class="text-center ratio-cell" ...></td>
+                        <td class="text-center ratio-cell"></td>
                         {% endfor %}
                         <td class="text-center">
                             <button class="btn btn-sm btn-outline-primary edit-strat-btn" 
